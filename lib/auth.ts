@@ -4,6 +4,10 @@ import { prisma } from './db'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+if (!process.env.DATABASE_URL) {
+  console.error('[Auth] DATABASE_URL is not set. Auth will fail. Ensure DATABASE_URL is configured in your environment.')
+}
+
 const isProd = process.env.NODE_ENV === 'production'
 
 const authSecret =

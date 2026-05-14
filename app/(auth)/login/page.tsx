@@ -24,7 +24,13 @@ function LoginPageContent() {
     try {
       const { error: authError, data } = await signIn.email({ email, password })
       if (authError) {
-        setError(authError.message ?? 'Unable to sign in. Please try again.')
+        console.error('[Login] Auth error:', authError)
+        const message =
+          authError.message ||
+          (typeof authError === 'object' && 'code' in authError
+            ? `Authentication failed: ${(authError as any).code}`
+            : 'Invalid email or password')
+        setError(message)
         return
       }
 
@@ -32,6 +38,7 @@ function LoginPageContent() {
       router.push(redirectTo ?? `/${role}/dashboard`)
       router.refresh()
     } catch (caughtError) {
+      console.error('[Login] Caught error:', caughtError)
       const message = caughtError instanceof Error
         ? caughtError.message
         : 'Unable to sign in right now. Please check your connection and try again.'
