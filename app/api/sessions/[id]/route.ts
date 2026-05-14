@@ -1,24 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/api-helpers'
+import { prisma } from '@/lib/db'
+
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const { session, error } = await requireAuth()
+  if (error) return error
+
+  const s = await prisma.session.findUnique({
+    where:   { id: params.id },
+    include: {
+      expert:   { select: { id: true, name: true, image: true } },
+      customer: { select: { id: true, name: true, image: true } },
+      category: { select: { id: true, name: true, icon: true } },
+      reviews:  true,
+      photos:   true,
+    },
+  })
+
+  if (!s) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (s.customerId !== session.user.id && s.expertId !== session.user.id && session.user.role !== 'admin')
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  return NextResponse.json({ session: s })
+}
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = createClient()
-  const admin    = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { session, error } = await requireAuth()
+  if (error) return error
 
-  const { data: session } = await supabase.from('sessions')
-    .select('expert_id').eq('id', params.id).single()
-  if (!session || session.expert_id !== user.id)
+  const s = await prisma.session.findUnique({ where: { id: params.id }, select: { expertId: true, customerId: true } })
+  if (!s) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  const isParticipant = s.expertId === session.user.id || s.customerId === session.user.id
+  if (!isParticipant && session.user.role !== 'admin')
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { error } = await admin.from('sessions').update({
-    notes:             body.notes,
-    parts_needed:      body.parts_needed,
-    notes_updated_at:  new Date().toISOString(),
-  }).eq('id', params.id)
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  const updated = await prisma.session.update({
+    where: { id: params.id },
+    data: {
+      expertNotes:    body.notes    ?? undefined,
+      customerNotes:  body.notes    ?? undefined,
+      notesUpdatedAt: body.notes !== undefined ? new Date() : undefined,
+    },
+  })
+  return NextResponse.json({ ok: true, session: updated })
 }
