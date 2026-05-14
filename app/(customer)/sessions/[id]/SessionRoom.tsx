@@ -8,8 +8,8 @@ import ChatPanel  from '@/components/session/ChatPanel'
 
 type Tab = 'photos' | 'chat' | 'notes'
 
-export default function SessionRoom({ session, userId, isExpert, token }: {
-  session: any; userId: string; isExpert: boolean; token: string | null
+export default function SessionRoom({ session, userId, isExpert }: {
+  session: any; userId: string; isExpert: boolean
 }) {
   const router = useRouter()
   const [tab, setTab]     = useState<Tab>('photos')
@@ -70,22 +70,11 @@ export default function SessionRoom({ session, userId, isExpert, token }: {
         </div>
 
         {/* Video */}
-        {token && session.daily_room_url ? (
-          <VideoCall
-            roomUrl={session.daily_room_url}
-            token={token}
-            sessionId={session.id}
-            isExpert={isExpert}
-            onSessionEnd={handleEnd}
-          />
-        ) : (
-          <div className="flex-1 flex items-center justify-center bg-ink-900 rounded-xl min-h-[300px]">
-            <div className="text-center">
-              <p className="text-ink-400 text-sm mb-3">Video room unavailable</p>
-              <p className="text-ink-600 text-xs">Session may not be active yet</p>
-            </div>
-          </div>
-        )}
+        <VideoCall
+          sessionId={session.id}
+          isExpert={isExpert}
+          onSessionEnd={handleEnd}
+        />
 
         {/* Pre-session photos (always visible below video) */}
         <div className="card p-4">

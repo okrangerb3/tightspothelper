@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { resetPassword } from '@/lib/auth-client'
 
 export default function ResetPasswordPage() {
   const router   = useRouter()
-  const supabase = createClient()
+  const params   = useSearchParams()
 
   const [password, setPassword]   = useState('')
   const [confirm, setConfirm]     = useState('')
@@ -20,7 +20,8 @@ export default function ResetPasswordPage() {
 
     setLoading(true); setError(null)
 
-    const { error } = await supabase.auth.updateUser({ password })
+    const token = params.get('token') ?? ''
+    const { error } = await resetPassword({ newPassword: password, token })
     if (error) { setError(error.message); setLoading(false); return }
 
     router.push('/login?message=password_reset')

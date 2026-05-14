@@ -1,19 +1,17 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { headers } from 'next/headers'
+import { auth } from '@/lib/auth'
 import { PageShell } from '@/components/ui/Shell'
 
 export default async function ExpertLayout({ children }: { children: React.ReactNode }) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles').select('full_name, role').eq('id', user.id).single()
-
-  if (profile?.role && profile.role !== 'expert') redirect(`/${profile.role}/dashboard`)
+  const user = session.user as any
+  if (user.role && user.role !== 'expert') redirect(`/${user.role}/dashboard`)
 
   return (
-    <PageShell role="expert" userName={profile?.full_name ?? user.email ?? ''}>
+    <PageShell role="expert" userName={user.name ?? user.email ?? ''}>
       {children}
     </PageShell>
   )

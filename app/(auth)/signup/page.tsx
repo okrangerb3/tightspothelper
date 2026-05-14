@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { signUp, signIn } from '@/lib/auth-client'
 
 type Role = 'customer' | 'expert'
 
@@ -27,7 +27,6 @@ const ROLES = [
 export default function SignupPage() {
   const router    = useRouter()
   const params    = useSearchParams()
-  const supabase  = createClient()
 
   // Pre-select role from URL if coming from landing page CTA
   const defaultRole = (params.get('role') as Role | null) ?? null
@@ -50,17 +49,24 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
-    const { data, error: authError } = await supabase.auth.signUp({
+    const { error: authError } = await signUp.email({
       email,
       password,
-      options: { data: { full_name: name, role } },
-    })
+      name,
+      // additional fields for better-auth
+      fetchOptions: { body: JSON.stringify({ role }) },
+    } as any)
 
     if (authError) { setError(authError.message); setLoading(false); return }
 
-    // Profile row is auto-created by a Supabase trigger
-    // Wait briefly then redirect
-    await new Promise(r => setTimeout(r, 500))
+    // After signup, update the role (better-auth sets default 'customer')
+    // We pass role as an additional field — if better-auth doesn't pick it up from
+    // the initial signup, update it immediately via our API
+    await fetch('/api/auth/update-role', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role }),
+    })
 
     router.push(role === 'expert' ? '/expert/apply' : '/customer/dashboard')
     router.refresh()
@@ -68,12 +74,9 @@ export default function SignupPage() {
 
   const handleOAuth = async (provider: 'google' | 'apple') => {
     if (!role) return
-    await supabase.auth.signInWithOAuth({
+    await signIn.social({
       provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${role === 'expert' ? '/expert/apply' : '/customer/dashboard'}`,
-        queryParams: { role },
-      },
+      callbackURL: role === 'expert' ? '/expert/apply' : '/customer/dashboard',
     })
   }
 

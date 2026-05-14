@@ -1,0 +1,355 @@
+// ============================================================
+// TightSpotHelper — Prisma Schema
+// PostgreSQL on Railway
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────
+
+enum Role {
+  customer
+  expert
+  admin
+}
+
+enum SessionStatus {
+  pending
+  active
+  completed
+  cancelled
+  disputed
+}
+
+enum ExpertStatus {
+  pending
+  approved
+  suspended
+  rejected
+}
+
+enum FeeType {
+  percentage
+  flat
+}
+
+enum PaymentStatus {
+  pending
+  held
+  released
+  refunded
+  failed
+}
+
+enum PhotoStage {
+  pre
+  during
+}
+
+enum StorageTier {
+  basic
+  pro
+  unlimited
+}
+
+// ── better-auth tables ────────────────────────────────────────
+// Using custom model names to avoid conflicts with app Session model.
+
+model AuthUser {
+  id            String   @id
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // App-specific additional fields
+  role             Role    @default(customer)
+  phone            String?
+  stripeCustomerId String? @unique
+
+  // Relations (better-auth)
+  authSessions  AuthSession[]
+  authAccounts  AuthAccount[]
+
+  // App relations
+  expertProfile    ExpertProfile?
+  customerSessions Session[]      @relation("CustomerSessions")
+  expertSessions   Session[]      @relation("ExpertSessions")
+  reviewsGiven     Review[]       @relation("ReviewsGiven")
+  reviewsReceived  Review[]       @relation("ReviewsReceived")
+  notifications    Notification[]
+  storageUsage     StorageUsage?
+
+  @@map("auth_users")
+}
+
+model AuthSession {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("auth_sessions")
+}
+
+model AuthAccount {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("auth_accounts")
+}
+
+model AuthVerification {
+  id         String    @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime? @default(now())
+  updatedAt  DateTime? @updatedAt
+
+  @@map("auth_verifications")
+}
+
+// ── Categories ────────────────────────────────────────────────
+
+model Category {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  feeType     FeeType  @default(percentage)
+  feeValue    Decimal  @default(0) @db.Decimal(10, 4)
+  feeFlatTiers Json?
+  rateMin     Decimal  @default(25)  @db.Decimal(10, 2)
+  rateMax     Decimal  @default(300) @db.Decimal(10, 2)
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  sessions     Session[]
+  feeOverrides FeeOverride[]
+
+  @@map("categories")
+}
+
+// ── Fee overrides ─────────────────────────────────────────────
+
+model FeeOverride {
+  id            String   @id @default(uuid())
+  categoryId    String
+  category      Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  overrideValue Decimal  @db.Decimal(10, 4)
+  startsAt      DateTime
+  endsAt        DateTime
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  @@map("fee_overrides")
+}
+
+// ── Expert profiles ───────────────────────────────────────────
+
+model ExpertProfile {
+  id                    String       @id
+  user                  AuthUser     @relation(fields: [id], references: [id], onDelete: Cascade)
+  status                ExpertStatus @default(pending)
+  bio                   String?
+  yearsExperience       Int?
+  certifications        String[]
+  stripeConnectId       String?      @unique
+  stripeConnectOnboarded Boolean     @default(false)
+  checkrCandidateId     String?
+  checkrReportId        String?
+  backgroundCheckPassed Boolean?
+  hourlyRate            Decimal?     @db.Decimal(10, 2)
+  categoryIds           String[]
+  ratingAvg             Decimal      @default(0) @db.Decimal(3, 2)
+  ratingCount           Int          @default(0)
+  sessionCount          Int          @default(0)
+  available             Boolean      @default(true)
+  rejectionReason       String?
+  reviewedBy            String?
+  reviewedAt            DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  @@map("expert_profiles")
+}
+
+// ── Sessions ──────────────────────────────────────────────────
+
+model Session {
+  id                    String        @id @default(uuid())
+  customerId            String
+  customer              AuthUser      @relation("CustomerSessions", fields: [customerId], references: [id])
+  expertId              String?
+  expert                AuthUser?     @relation("ExpertSessions", fields: [expertId], references: [id])
+  categoryId            String
+  category              Category      @relation(fields: [categoryId], references: [id])
+  status                SessionStatus @default(pending)
+
+  scheduledAt           DateTime?
+  startedAt             DateTime?
+  endedAt               DateTime?
+  durationSeconds       Int?
+  durationBilledMinutes Int?
+
+  problemTitle          String?
+  problemDescription    String?
+
+  expertHourlyRate      Decimal?      @db.Decimal(10, 2)
+  platformFeeType       FeeType?
+  platformFeeValue      Decimal?      @db.Decimal(10, 4)
+  expertPayout          Decimal?      @db.Decimal(10, 2)
+  platformFee           Decimal?      @db.Decimal(10, 2)
+
+  paymentStatus         PaymentStatus @default(pending)
+  stripePaymentIntentId String?
+
+  customerNotes         String?
+  expertNotes           String?
+  notesUpdatedAt        DateTime?
+
+  cancelledReason       String?
+  cancelledAt           DateTime?
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  photos     SessionPhoto[]
+  recordings Recording[]
+  reviews    Review[]
+  disputes   Dispute[]
+
+  @@map("sessions")
+}
+
+// ── Session photos ────────────────────────────────────────────
+
+model SessionPhoto {
+  id         String     @id @default(uuid())
+  sessionId  String
+  session    Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  uploadedBy String
+  url        String
+  r2Key      String
+  stage      PhotoStage @default(pre)
+  createdAt  DateTime   @default(now())
+
+  @@map("session_photos")
+}
+
+// ── Recordings ────────────────────────────────────────────────
+
+model Recording {
+  id              String    @id @default(uuid())
+  sessionId       String
+  session         Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  r2KeyOriginal   String?
+  r2KeyBackup     String?
+  durationSeconds Int?
+  fileSizeBytes   BigInt?
+  expiresAt       DateTime?
+  downloadCount   Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  @@map("recordings")
+}
+
+// ── Reviews ───────────────────────────────────────────────────
+
+model Review {
+  id            String    @id @default(uuid())
+  sessionId     String
+  session       Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reviewerId    String
+  reviewer      AuthUser  @relation("ReviewsGiven", fields: [reviewerId], references: [id])
+  revieweeId    String
+  reviewee      AuthUser  @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+  rating        Int
+  comment       String?
+  flagged       Boolean   @default(false)
+  flaggedReason String?
+  moderatedBy   String?
+  moderatedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([sessionId, reviewerId])
+  @@map("reviews")
+}
+
+// ── Disputes ──────────────────────────────────────────────────
+
+model Dispute {
+  id         String    @id @default(uuid())
+  sessionId  String
+  session    Session   @relation(fields: [sessionId], references: [id])
+  raisedBy   String
+  reason     String
+  status     String    @default("open")
+  resolution String?
+  resolvedBy String?
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@map("disputes")
+}
+
+// ── Notifications ─────────────────────────────────────────────
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String
+  user      AuthUser  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  payload   Json?
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@map("notifications")
+}
+
+// ── Storage usage ─────────────────────────────────────────────
+
+model StorageUsage {
+  id                 String      @id @default(uuid())
+  userId             String      @unique
+  user               AuthUser    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan               StorageTier @default(basic)
+  usedBytes          BigInt      @default(0)
+  stripeSubId        String?
+  subscriptionEndsAt DateTime?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@map("storage_usage")
+}
