@@ -82,10 +82,10 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
         <div className="card p-5 mb-4">
           <h2 className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-3">Payment</h2>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-ink-400">Session subtotal</span><span>${(dbSession.sessionSubtotal as number)?.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span className="text-ink-400">Service fee</span><span>${(dbSession.platformFeeAmount as number)?.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-ink-400">Session subtotal</span><span>${dbSession.sessionSubtotal?.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-ink-400">Service fee</span><span>${dbSession.platformFeeAmount?.toFixed(2)}</span></div>
             <div className="flex justify-between font-medium border-t border-ink-800 pt-2 mt-2">
-              <span>Total charged</span><span className="text-brand-400">${(dbSession.customerTotal as number).toFixed(2)}</span>
+              <span>Total charged</span><span className="text-brand-400">${dbSession.customerTotal?.toFixed(2)}</span>
             </div>
           </div>
         </div>
