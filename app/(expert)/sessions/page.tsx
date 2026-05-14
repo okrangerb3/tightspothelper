@@ -36,7 +36,9 @@ export default async function ExpertSessionsPage() {
         <div className="space-y-2">
           {sessions.map(s => (
             <Link key={s.id}
-              href={s.status === 'active' ? `/expert/sessions/${s.id}` : `/expert/sessions/${s.id}`}
+              href={s.status === 'completed' || s.status === 'cancelled' || s.status === 'disputed'
+                ? `/expert/sessions/${s.id}/summary`
+                : `/expert/sessions/${s.id}`}
               className="card p-4 flex items-center gap-4 hover:border-ink-700 transition-colors group">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-ink-100 truncate">{s.problem_title ?? 'Session'}</p>

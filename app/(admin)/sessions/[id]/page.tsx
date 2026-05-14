@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import DisputeControls from './DisputeControls'
+import ReviewModerationActions from './ReviewModerationActions'
 
 export default async function AdminSessionDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -100,14 +101,22 @@ export default async function AdminSessionDetailPage({ params }: { params: { id:
       {/* Reviews */}
       {reviews && reviews.length > 0 && (
         <div className="card p-5">
-          <p className="text-xs text-ink-500 uppercase tracking-wide mb-3">Reviews</p>
+          <p className="text-xs text-ink-500 uppercase tracking-wide mb-3">Reviews ({reviews.length})</p>
           {reviews.map(r => (
-            <div key={r.id} className="py-2 border-b border-ink-800 last:border-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
-                {r.flagged && <span className="text-xs text-red-400 bg-red-400/10 px-2 py-0.5 rounded">Flagged</span>}
+            <div key={r.id} className={`py-3 border-b border-ink-800 last:border-0 ${r.flagged ? 'opacity-60' : ''}`}>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-base">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                <span className="text-[10px] text-ink-600">
+                  reviewer: {r.reviewer_id?.slice(0, 8)} → reviewee: {r.reviewee_id?.slice(0, 8)}
+                </span>
+                {r.flagged && (
+                  <span className="text-xs text-red-400 bg-red-400/10 px-2 py-0.5 rounded border border-red-400/20">
+                    Flagged{r.flagged_reason ? `: ${r.flagged_reason}` : ''}
+                  </span>
+                )}
               </div>
-              {r.comment && <p className="text-xs text-ink-400 mt-1">{r.comment}</p>}
+              {r.comment && <p className="text-xs text-ink-400 mt-1 italic">"{r.comment}"</p>}
+              <ReviewModerationActions review={r} />
             </div>
           ))}
         </div>
