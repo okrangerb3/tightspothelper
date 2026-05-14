@@ -6,14 +6,10 @@ export async function GET() {
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const sub = await prisma.storageUsage.findFirst({
-    where:   { userId: session.user.id, cancelledAt: null },
-    orderBy: { startedAt: 'desc' },
+  // Storage is now pay-per-recording; count purchased recordings
+  const count = await prisma.recording.count({
+    where: { purchasedBy: session.user.id, purchaseStatus: 'purchased' },
   })
 
-  return NextResponse.json({
-    tier:       sub?.tier       ?? 'free',
-    usedBytes:  sub?.usedBytes  ?? 0,
-    limitBytes: sub?.limitBytes ?? 0,
-  })
+  return NextResponse.json({ purchasedCount: count })
 }

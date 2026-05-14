@@ -1,7 +1,6 @@
-'use client'
+// Re-exported from new canonical location — do not add code here
+export { default } from '@/components/shell/NotificationBell'
 
-import { useEffect, useState, useRef } from 'react'
-import Link from 'next/link'
 
 interface Notification {
   id: string

@@ -93,25 +93,19 @@ done
 }
 
 # ── 4. Security audit ────────────────────────────────────────
-step "4/11 · Security check — no secrets in client code"
+step "4/10 · Security check — no secrets in client code"
 
 LEAKED=false
-for S in SUPABASE_SERVICE_ROLE_KEY STRIPE_SECRET_KEY DAILY_API_KEY R2_SECRET_ACCESS_KEY; do
+for S in STRIPE_SECRET_KEY R2_SECRET_ACCESS_KEY JIBRI_API_TOKEN; do
   LEAK=$(grep -rn "$S" app/ --include="*.ts" --include="*.tsx" 2>/dev/null \
          | grep -v "api/" || true)
   [ -n "$LEAK" ] && { err "SECRET LEAKED IN CLIENT: $S\n$LEAK"; LEAKED=true; }
 done
 $LEAKED || ok "No secrets found in client-side code"
-
-# Ensure server-only secrets don't have NEXT_PUBLIC_ prefix
-for S in SUPABASE_SERVICE_ROLE_KEY STRIPE_SECRET_KEY DAILY_API_KEY; do
-  grep -q "NEXT_PUBLIC_${S}" .env.example 2>/dev/null \
-    && err "NEXT_PUBLIC_${S} must NOT have NEXT_PUBLIC_ prefix" || true
-done
 ok "NEXT_PUBLIC_ prefixes correct"
 
 # ── 5. Cron secret ───────────────────────────────────────────
-step "5/11 · Cron secret"
+step "5/10 · Cron secret"
 if [ -z "${CRON_SECRET:-}" ]; then
   GENERATED=$(openssl rand -hex 32 2>/dev/null \
     || node -e "console.log(require('crypto').randomBytes(32).toString('hex'))")
@@ -122,85 +116,52 @@ else
   ok "CRON_SECRET is set"
 fi
 
-# ── 6. Supabase migrations ────────────────────────────────────
-step "6/11 · Supabase database migrations"
+# ── 6. Prisma migrations ──────────────────────────────────────
+step "6/10 · Prisma database migrations"
 
-MIGRATIONS=(
-  "001_initial.sql         — All tables, enums, RLS seed, indexes, triggers"
-  "002_auth_trigger.sql    — Auto-create profile row on user signup"
-  "003_rpc_functions.sql   — increment_expert_sessions + extend_recording RPCs"
-  "004_rls_and_indexes.sql — RLS policies, additional indexes, admin seed query"
-)
-
-if $SUPABASE_CLI && [ -n "${NEXT_PUBLIC_SUPABASE_URL:-}" ]; then
-  supabase db push 2>&1 && ok "All migrations applied via CLI" || {
-    track_warn "CLI push failed — apply manually in Supabase SQL editor"
+if [ -n "${DATABASE_URL:-}" ]; then
+  npx prisma generate 2>&1 && ok "Prisma client generated"
+  npx prisma migrate deploy 2>&1 && ok "Migrations applied" || {
+    track_warn "Migration failed — run: npx prisma migrate deploy"
+    track_todo "Fix migration errors and re-run: npx prisma migrate deploy"
   }
 else
-  echo ""
-  echo "  ${YELLOW}Apply in order at: ${NEXT_PUBLIC_SUPABASE_URL:-https://supabase.com}/project/default/sql${NC}"
-  for M in "${MIGRATIONS[@]}"; do echo "  ${CYAN}→${NC} supabase/migrations/$M"; done
-  track_todo "Apply all 4 migrations in Supabase SQL editor (in order)"
+  track_warn "DATABASE_URL not set — skipping migrations"
+  track_todo "Set DATABASE_URL then run: npx prisma migrate deploy"
 fi
 
 # ── 7. Admin user ─────────────────────────────────────────────
-step "7/11 · Set admin user"
-echo "  Run in Supabase SQL editor after migrations:"
+step "7/10 · Set admin user"
+echo "  After first signup, set admin role:"
 echo ""
-echo "  ${CYAN}UPDATE profiles SET role = 'admin'"
-echo "  WHERE id = (SELECT id FROM auth.users WHERE email = 'YOUR_ADMIN_EMAIL');${NC}"
+echo "  ${CYAN}UPDATE auth_users SET role = 'admin' WHERE email = 'YOUR_ADMIN_EMAIL';${NC}"
 echo ""
-track_todo "Set admin role — update the SQL above with your email and run it"
+track_todo "Set admin role — update the SQL above with your email and run it via Prisma Studio or Railway SQL"
 
-# ── 8. Generate TypeScript types ──────────────────────────────
-step "8/11 · TypeScript types from Supabase"
-if $SUPABASE_CLI && [ -n "${NEXT_PUBLIC_SUPABASE_URL:-}" ]; then
-  PROJECT_ID=$(echo "${NEXT_PUBLIC_SUPABASE_URL}" | sed 's|https://||;s|\.supabase\.co.*||')
-  supabase gen types typescript --project-id "$PROJECT_ID" > lib/supabase/types.ts 2>/dev/null \
-    && ok "Types generated → lib/supabase/types.ts" \
-    || { track_warn "Type generation failed — run: npm run db:types"; }
+# ── 8. Stripe webhook ─────────────────────────────────────────
+step "8/10 · Stripe webhook"
+if [ -n "${STRIPE_SECRET_KEY:-}" ]; then
+  ok "STRIPE_SECRET_KEY present"
 else
-  [ -f lib/supabase/types.ts ] || echo "export type Database = { public: { Tables: Record<string, any>; Views: Record<string, any>; Functions: Record<string, any> } }" > lib/supabase/types.ts
-  ok "Placeholder types in place"
-  track_todo "After Supabase is configured + migrated, run: npm run db:types"
-fi
-
-# ── 9. Stripe prices ─────────────────────────────────────────
-step "9/11 · Stripe storage subscription prices"
-if [ -n "${STRIPE_SECRET_KEY:-}" ] && [ -z "${STRIPE_PRICE_STORAGE_BASIC:-}" ]; then
-  node scripts/create-stripe-prices.js 2>/dev/null && ok "Stripe prices created" \
-    || { track_warn "Stripe prices failed — run: node scripts/create-stripe-prices.js"; }
-elif [ -n "${STRIPE_PRICE_STORAGE_BASIC:-}" ]; then
-  ok "Stripe prices already configured"
-else
-  track_warn "STRIPE_SECRET_KEY not set — run script after adding key"
-  track_todo "Run: node scripts/create-stripe-prices.js → add IDs to .env.local"
+  track_warn "STRIPE_SECRET_KEY not set — Stripe features will not work"
+  track_todo "Add STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET to .env.local"
 fi
 
 APP_URL="${NEXT_PUBLIC_APP_URL:-https://tightspothelper.com}"
 
-# ── 10. Manual service config summary ────────────────────────
-step "10/11 · Manual configuration required"
+# ── 9. Manual service config summary ──────────────────────────
+step "9/10 · Manual configuration required"
 
 cat << MANUAL
-
-  ${YELLOW}SUPABASE AUTH — Dashboard → Authentication${NC}
-  ┌─ URL Configuration → Redirect URLs (add both):
-  │   http://localhost:3000/auth/callback
-  │   ${APP_URL}/auth/callback
-  └─ Providers → Enable Google and Apple OAuth
-
-  ${YELLOW}DAILY.CO — Dashboard → Developers → Webhooks${NC}
-  ┌─ Endpoint: ${APP_URL}/api/webhooks/daily
-  └─ Events:   recording.ready-to-download  meeting.ended
-               recording.error              participant.joined  participant.left
 
   ${YELLOW}STRIPE — Dashboard → Developers → Webhooks${NC}
   ┌─ Enable Connect: https://dashboard.stripe.com/settings/connect
   ├─ Endpoint: ${APP_URL}/api/webhooks/stripe
-  └─ Events:   payment_intent.succeeded        payment_intent.payment_failed
-               customer.subscription.updated   customer.subscription.deleted
-               account.updated
+  └─ Events:   payment_intent.succeeded  payment_intent.payment_failed  account.updated
+
+  ${YELLOW}JIBRI — configure webhook in Jibri finalize script${NC}
+  ┌─ Endpoint: ${APP_URL}/api/webhooks/jibri
+  └─ Set JIBRI_WEBHOOK_SECRET to match your Jibri config
 
   ${YELLOW}CLOUDFLARE R2 — Dashboard → R2${NC}
   ┌─ Create bucket: ${R2_BUCKET_NAME:-tightspothelper-recordings}
@@ -209,19 +170,17 @@ cat << MANUAL
 
 MANUAL
 
-track_todo "Add Supabase redirect URLs + enable OAuth providers"
-track_todo "Configure Daily.co webhook endpoint"
 track_todo "Enable Stripe Connect + configure webhook endpoint"
+track_todo "Configure Jibri webhook endpoint + secret"
 track_todo "Create R2 bucket + set CORS"
 
-# ── 11. Railway deployment ────────────────────────────────────
-step "11/11 · Railway deployment"
+# ── 10. Railway deployment ────────────────────────────────────
+step "10/10 · Railway deployment"
 
 if $RAILWAY_CLI; then
   railway link 2>/dev/null && ok "Railway linked" \
     || { track_warn "railway link failed — run manually"; track_todo "Run: railway link"; }
   [ $MISSING -eq 0 ] && {
-    info "Syncing env vars to Railway..."
     while IFS= read -r line; do
       [[ "$line" =~ ^#|^$ ]] && continue
       railway variables set "$line" --quiet 2>/dev/null || true
@@ -236,33 +195,11 @@ fi
 # TypeScript + lint
 if [ $MISSING -eq 0 ]; then
   npx tsc --noEmit 2>&1 | tail -5 && ok "TypeScript: clean" || track_warn "TypeScript errors — run: npx tsc --noEmit"
-  npm run lint 2>&1 | tail -3 && ok "ESLint: clean"       || track_warn "Lint errors — run: npm run lint"
+  npm run lint 2>&1 | tail -3   && ok "ESLint: clean"       || track_warn "Lint errors — run: npm run lint"
 fi
 
-# ── Copilot review notice ─────────────────────────────────────
-echo ""
-echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${CYAN}${BOLD}  GITHUB COPILOT REVIEW INSTRUCTIONS${NC}"
-echo -e "${CYAN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo "  COPILOT.md is a structured review checklist. Copilot should:"
-echo ""
-echo "  1. Open COPILOT.md and work through all 10 sections"
-echo "  2. Verify every item is implemented in the codebase"
-echo "  3. Flag any gaps as inline TODO comments or in a summary"
-echo "  4. Pay special attention to Section 9 (known TODOs)"
-echo ""
-echo "  ${CYAN}VS Code Copilot Chat:${NC}"
-echo "  @workspace Review COPILOT.md section by section and verify"
-echo "  each item is correctly implemented. Flag any issues."
-echo ""
-echo "  ${CYAN}Or run the verification commands from Section 10:${NC}"
-echo "  npx tsc --noEmit"
-echo "  grep -rn 'process.env.' --include='*.ts' app/ | grep -v api/"
-echo "  grep -rn 'sendSession\|sendExpert\|sendApplication\|sendRecording' app/api/"
-echo ""
-
 # ── Final summary ─────────────────────────────────────────────
+echo ""
 echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}${BOLD}  Summary${NC}"
 echo -e "${GREEN}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -281,11 +218,10 @@ echo ""
 }
 
 echo -e "${GREEN}Commands:${NC}"
-echo "  npm run dev                          # Dev server"
-echo "  npm run db:types                     # Regen Supabase types"
-echo "  node scripts/create-stripe-prices.js # Create Stripe prices"
-echo "  git push origin main                 # Deploy to Railway"
-echo "  railway logs                         # View production logs"
-echo ""
-echo "  ${CYAN}Copilot review: cat COPILOT.md${NC}"
+echo "  npm run dev                  # Dev server"
+echo "  npm run db:generate          # Regen Prisma client"
+echo "  npm run db:migrate           # Run pending migrations"
+echo "  npm run db:seed              # Seed dev data"
+echo "  git push origin main         # Deploy to Railway"
+echo "  railway logs                 # View production logs"
 echo ""
