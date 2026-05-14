@@ -68,7 +68,7 @@ export default function FeeOverrideManager({
             <option value="">Select a category…</option>
             {categories.map(c => (
               <option key={c.id} value={c.id}>
-                {c.name} (current: {fmt(c.fee_value, c.fee_type)})
+                {c.name} (current: {fmt(c.feeValue, c.feeType)})
               </option>
             ))}
           </select>
@@ -92,7 +92,7 @@ export default function FeeOverrideManager({
           {selectedCat && (
             <div className="flex justify-between text-xs text-ink-600 mt-1">
               <span>0 (free)</span>
-              <span>Current: {fmt(selectedCat.fee_value, selectedCat.fee_type)}</span>
+              <span>Current: {fmt(selectedCat.feeValue, selectedCat.feeType)}</span>
             </div>
           )}
         </div>
@@ -116,7 +116,7 @@ export default function FeeOverrideManager({
             will use a fee of{' '}
             <strong className="text-brand-400">{fmt(form.override_value, selectedCat.fee_type)}</strong>
             {' '}instead of{' '}
-            <strong className="text-ink-300">{fmt(selectedCat.fee_value, selectedCat.fee_type)}</strong>
+            <strong className="text-ink-300">{fmt(selectedCat.feeValue, selectedCat.feeType)}</strong>
           </div>
         )}
 
