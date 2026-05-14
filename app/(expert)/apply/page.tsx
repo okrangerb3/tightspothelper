@@ -217,45 +217,6 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-    years:          '',
-    certifications: '',
-    categoryIds:    [] as string[],
-    hourlyRate:     75,
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState<string | null>(null)
-
-  useEffect(() => {
-    supabase.from('categories').select('id,name,rate_min,rate_max').eq('active', true)
-      .then(({ data }) => setCats(data ?? []))
-  }, [])
-
-  const toggleCat = (id: string) =>
-    setForm(f => ({
-      ...f,
-      categoryIds: f.categoryIds.includes(id)
-        ? f.categoryIds.filter(c => c !== id)
-        : [...f.categoryIds, id],
-    }))
-
-  const handleSubmit = async () => {
-    setLoading(true); setError(null)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { router.push('/login'); return }
-
-    const { error } = await supabase.from('expert_profiles').upsert({
-      id:             user.id,
-      bio:            form.bio,
-      years_experience: parseInt(form.years) || 0,
-      certifications: form.certifications.split(',').map(s => s.trim()).filter(Boolean),
-      category_ids:   form.categoryIds,
-      hourly_rate:    form.hourlyRate,
-      status:         'pending',
-    })
-
-    if (error) { setError(error.message); setLoading(false); return }
-    router.push('/expert/apply/connect')
-  }
 
   return (
     <div className="min-h-screen p-6 max-w-xl mx-auto">
