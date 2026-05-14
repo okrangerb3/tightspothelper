@@ -9,3 +9,5 @@ out/
 npm-debug.log*
 .vercel
 .railway
+*.tsbuildinfo
+tsconfig.tsbuildinfo
