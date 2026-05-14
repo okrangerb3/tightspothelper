@@ -14,7 +14,7 @@ create type expert_status as enum ('pending', 'approved', 'suspended', 'rejected
 create type fee_type as enum ('percentage', 'flat');
 create type recording_plan as enum ('free', 'per_session', 'subscription');
 create type storage_tier as enum ('basic', 'pro', 'unlimited');
-create type payment_status as enum ('pending', 'held', 'released', 'refunded');
+create type payment_status as enum ('pending', 'held', 'released', 'refunded', 'failed');
 create type photo_stage as enum ('pre', 'during');
 
 -- ── Profiles ─────────────────────────────────────────────────

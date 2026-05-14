@@ -14,8 +14,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const body = await req.json()
   const { error } = await admin.from('sessions').update({
-    notes:        body.notes,
-    parts_needed: body.parts_needed,
+    notes:             body.notes,
+    parts_needed:      body.parts_needed,
+    notes_updated_at:  new Date().toISOString(),
   }).eq('id', params.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
