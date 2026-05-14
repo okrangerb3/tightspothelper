@@ -229,8 +229,11 @@ model Session {
   expertHourlyRate      Decimal?      @db.Decimal(10, 2)
   platformFeeType       FeeType?
   platformFeeValue      Decimal?      @db.Decimal(10, 4)
+  sessionSubtotal       Decimal?      @db.Decimal(10, 2)
+  platformFeeAmount     Decimal?      @db.Decimal(10, 2)
   expertPayout          Decimal?      @db.Decimal(10, 2)
   platformFee           Decimal?      @db.Decimal(10, 2)
+  customerTotal         Decimal?      @db.Decimal(10, 2)
 
   paymentStatus         PaymentStatus @default(pending)
   stripePaymentIntentId String?
@@ -238,6 +241,7 @@ model Session {
   customerNotes         String?
   expertNotes           String?
   notesUpdatedAt        DateTime?
+  partsNeeded           Json?
 
   cancelledReason       String?
   cancelledAt           DateTime?
