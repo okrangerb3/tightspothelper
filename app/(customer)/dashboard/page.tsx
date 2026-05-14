@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { headers } from 'next/headers'
 import { StatCard } from '@/components/ui/Shell'
 
 const STATUS_STYLE: Record<string, string> = {
@@ -12,25 +14,22 @@ const STATUS_STYLE: Record<string, string> = {
 }
 
 export default async function CustomerDashboard() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
+  const user = session.user
+  if (user.role !== 'customer') redirect(`/${user.role}/dashboard`)
 
-  const { data: profile } = await supabase
-    .from('profiles').select('full_name, role').eq('id', user.id).single()
-  if (profile?.role !== 'customer') redirect(`/${profile?.role}/dashboard`)
+  const sessions = await prisma.session.findMany({
+    where: { customerId: user.id },
+    include: { category: { select: { name: true, icon: true } }, expert: { select: { user: { select: { name: true } } } } },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  })
 
-  const { data: sessions } = await supabase
-    .from('sessions')
-    .select('*, category:category_id(name,icon), expert:expert_id(full_name)')
-    .eq('customer_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(20)
-
-  const totalSessions  = sessions?.length ?? 0
-  const totalSpend     = sessions?.filter(s => s.status === 'completed')
-                              .reduce((sum, s) => sum + (s.customer_total ?? 0), 0) ?? 0
-  const activeSession  = sessions?.find(s => s.status === 'active')
+  const totalSessions = sessions.length
+  const totalSpend    = sessions.filter(s => s.status === 'completed')
+                          .reduce((sum, s) => sum + (s.customerTotal ?? 0), 0)
+  const activeSession = sessions.find(s => s.status === 'active')
 
   return (
     <div className="p-8 max-w-5xl">
@@ -38,7 +37,7 @@ export default async function CustomerDashboard() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="font-display text-2xl font-bold text-white">
-              Hey, {profile?.full_name?.split(' ')[0] ?? 'there'} 👋
+              Hey, {user.name?.split(' ')[0] ?? 'there'} 👋
             </h1>
             <p className="text-ink-400 text-sm mt-1">What needs fixing today?</p>
           </div>
@@ -71,7 +70,7 @@ export default async function CustomerDashboard() {
         {/* Session history */}
         <div>
           <h2 className="font-display text-base font-bold text-white mb-4">Recent sessions</h2>
-          {!sessions?.length ? (
+          {!sessions.length ? (
             <div className="card p-8 text-center">
               <p className="text-ink-500 text-sm mb-4">No sessions yet</p>
               <Link href="/customer/book" className="btn-primary">Book your first session</Link>
@@ -85,20 +84,20 @@ export default async function CustomerDashboard() {
                   className="card p-4 flex items-center gap-4 hover:border-ink-700 transition-colors group"
                 >
                   <div className="w-10 h-10 rounded-lg bg-ink-800 flex items-center justify-center text-lg flex-shrink-0">
-                    {(s.category as any)?.icon?.replace('ti-', '') ?? '🔧'}
+                    {s.category?.icon?.replace('ti-', '') ?? '🔧'}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-ink-100 truncate">
-                      {s.problem_title ?? 'Session'}
+                    {s.problemTitle ?? 'Session'}
                     </p>
                     <p className="text-xs text-ink-500 mt-0.5">
-                      {(s.category as any)?.name} · {new Date(s.created_at).toLocaleDateString()}
+                      {s.category?.name} · {new Date(s.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {s.customer_total && (
+                    {s.customerTotal && (
                       <span className="text-sm font-medium text-ink-300">
-                        ${s.customer_total.toFixed(2)}
+                        ${s.customerTotal.toFixed(2)}
                       </span>
                     )}
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${STATUS_STYLE[s.status]}`}>

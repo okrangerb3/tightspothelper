@@ -1,5 +1,8 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { headers } from 'next/headers'
 
 const STATUS_STYLE: Record<string, string> = {
   pending:   'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
@@ -10,27 +13,21 @@ const STATUS_STYLE: Record<string, string> = {
 }
 
 export default async function CustomerSessionsPage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
+  const user = session.user
 
-  const { data: sessions } = await supabase
-    .from('sessions')
-    .select(`
-      id, status, problem_title, problem_description,
-      customer_total, expert_payout, duration_billed_minutes,
-      created_at, started_at, ended_at,
-      category:category_id(name, icon),
-      expert:expert_id(full_name)
-    `)
-    .eq('customer_id', user!.id)
-    .order('created_at', { ascending: false })
+  const sessions = await prisma.session.findMany({
+    where: { customerId: user.id },
+    include: {
+      category: { select: { name: true, icon: true } },
+      expert: { select: { user: { select: { name: true } } } },
+      recordings: { select: { id: true, plan: true, expiresAt: true, deletedAt: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  })
 
-  const { data: recordings } = await supabase
-    .from('recordings')
-    .select('session_id, plan, expires_at, deleted_at')
-    .in('session_id', sessions?.map(s => s.id) ?? [])
-
-  const recMap = Object.fromEntries((recordings ?? []).map(r => [r.session_id, r]))
+  const recMap = Object.fromEntries(sessions.map(s => [s.id, s.recordings?.[0]]))
 
   return (
     <div className="p-8 max-w-4xl">
@@ -39,7 +36,7 @@ export default async function CustomerSessionsPage() {
         <Link href="/customer/book" className="btn-primary">New session</Link>
       </div>
 
-      {!sessions?.length ? (
+      {!sessions.length ? (
         <div className="card p-12 text-center">
           <p className="text-ink-500 mb-4">No sessions yet</p>
           <Link href="/customer/book" className="btn-primary">Book your first session</Link>
@@ -48,8 +45,8 @@ export default async function CustomerSessionsPage() {
         <div className="space-y-3">
           {sessions.map(s => {
             const rec       = recMap[s.id]
-            const hasRec    = rec && !rec.deleted_at
-            const recExpiry = rec?.expires_at ? new Date(rec.expires_at) : null
+            const hasRec    = rec && !rec.deletedAt
+            const recExpiry = rec?.expiresAt ? new Date(rec.expiresAt) : null
             const daysLeft  = recExpiry ? Math.ceil((recExpiry.getTime() - Date.now()) / 86400000) : null
 
             return (
@@ -58,16 +55,16 @@ export default async function CustomerSessionsPage() {
               } className="card p-5 flex gap-4 hover:border-ink-700 transition-colors group block">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="text-sm font-medium text-ink-100">{s.problem_title ?? 'Session'}</h3>
+                    <h3 className="text-sm font-medium text-ink-100">{s.problemTitle ?? 'Session'}</h3>
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${STATUS_STYLE[s.status]}`}>
                       {s.status}
                     </span>
                   </div>
                   <p className="text-xs text-ink-500">
-                    {(s.category as any)?.name}
-                    {(s.expert as any)?.full_name ? ` · ${(s.expert as any).full_name}` : ''}
-                    {s.duration_billed_minutes ? ` · ${s.duration_billed_minutes} min` : ''}
-                    {' · '}{new Date(s.created_at).toLocaleDateString()}
+                    {s.category?.name}
+                    {s.expert?.user?.name ? ` · ${s.expert.user.name}` : ''}
+                    {s.durationBilledMins ? ` · ${s.durationBilledMins} min` : ''}
+                    {' · '}{new Date(s.createdAt).toLocaleDateString()}
                   </p>
                   {hasRec && daysLeft !== null && daysLeft <= 7 && rec.plan === 'free' && (
                     <p className="text-xs text-yellow-400 mt-1">
@@ -77,8 +74,8 @@ export default async function CustomerSessionsPage() {
                   )}
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
-                  {s.customer_total && (
-                    <span className="text-sm font-medium text-ink-300">${(s.customer_total as number).toFixed(2)}</span>
+                  {s.customerTotal && (
+                    <span className="text-sm font-medium text-ink-300">${(s.customerTotal as number).toFixed(2)}</span>
                   )}
                   {hasRec && (
                     <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
