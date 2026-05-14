@@ -4,8 +4,20 @@ import { prisma } from './db'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+const isProd = process.env.NODE_ENV === 'production'
+
+const authSecret =
+  process.env.BETTER_AUTH_SECRET ||
+  (isProd ? undefined : 'tightspothelper-local-dev-secret-change-before-prod')
+
+const authBaseUrl =
+  process.env.BETTER_AUTH_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  'http://localhost:3000'
 
 export const auth = betterAuth({
+  secret: authSecret,
+  baseURL: authBaseUrl,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
 
   // Map to our custom table names to avoid conflict with app Session model
@@ -55,6 +67,8 @@ export const auth = betterAuth({
   },
 
   trustedOrigins: [
-    process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
+    authBaseUrl,
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
   ],
 })
