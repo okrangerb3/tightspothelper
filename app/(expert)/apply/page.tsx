@@ -217,14 +217,6 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-
-export default function ExpertApplyPage() {
-  const router   = useRouter()
-  const supabase = createClient()
-
-  const [step, setStep]   = useState<Step>('intro')
-  const [cats, setCats]   = useState<Category[]>([])
-  const [form, setForm]   = useState({
     bio:            '',
     years:          '',
     certifications: '',
