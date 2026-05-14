@@ -14,8 +14,8 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
     where: { id: params.id },
     include: {
       category: { select: { name: true, icon: true } },
-      expert: { select: { ratingAvg: true, user: { select: { name: true } } } },
-      customer: { select: { user: { select: { name: true } } } },
+      expert: { select: { name: true } },
+      customer: { select: { name: true } },
       photos: { select: { id: true, stage: true, storagePath: true } },
       recordings: { select: { id: true, purchaseStatus: true, expiresAt: true, durationSeconds: true }, take: 1 },
     },
@@ -47,13 +47,13 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
         <div className="flex items-center gap-2 mb-1">
           <span className="text-xs text-ink-500">{dbSession.category?.name}</span>
           <span className={`text-[10px] px-2 py-0.5 rounded-full border
-            ${session.status === 'completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-ink-800 text-ink-400 border-ink-700'}`}>
+            ${dbSession.status === 'completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-ink-800 text-ink-400 border-ink-700'}`}>
             {dbSession.status}
           </span>
         </div>
         <h1 className="font-display text-2xl font-bold text-white">{dbSession.problemTitle}</h1>
         <p className="text-ink-400 text-sm mt-1">
-          With {dbSession.expert?.user?.name} · {new Date(dbSession.createdAt).toLocaleDateString()}
+          With {dbSession.expert?.name} · {new Date(dbSession.createdAt).toLocaleDateString()}
           {dbSession.durationBilledMinutes ? ` · ${dbSession.durationBilledMinutes} min` : ''}
         </p>
       </div>
@@ -128,7 +128,7 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
       )}
 
       {/* Leave a review */}
-      {session.status === 'completed' && !review && (
+      {dbSession.status === 'completed' && !review && (
         <ReviewForm sessionId={params.id} revieweeId={dbSession.expertId!} />
       )}
       {review && (

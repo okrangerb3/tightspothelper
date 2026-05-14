@@ -21,11 +21,11 @@ export default async function ExpertEarningsPage() {
     }),
   ])
 
-  const totalEarned   = sessions.reduce((s, r) => s + (r.expertPayout ?? 0), 0)
+  const totalEarned   = sessions.reduce((s, r) => s + Number(r.expertPayout ?? 0), 0)
   const thisMonth     = sessions.filter(s => {
     const d = new Date(s.createdAt); const n = new Date()
     return d.getMonth() === n.getMonth() && d.getFullYear() === n.getFullYear()
-  }).reduce((s, r) => s + (r.expertPayout ?? 0), 0)
+  }).reduce((s, r) => s + Number(r.expertPayout ?? 0), 0)
   const avgPerSession = sessions.length ? totalEarned / sessions.length : 0
 
   return (

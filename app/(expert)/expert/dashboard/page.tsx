@@ -49,7 +49,7 @@ export default async function ExpertDashboard() {
   }
 
   const completed   = sessions.filter(s => s.status === 'completed')
-  const totalEarned = completed.reduce((sum, s) => sum + (s.expertPayout ?? 0), 0)
+  const totalEarned = completed.reduce((sum, s) => sum + Number(s.expertPayout ?? 0), 0)
   const active      = sessions.find(s => s.status === 'active')
 
   return (
@@ -77,7 +77,7 @@ export default async function ExpertDashboard() {
         )}
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-          <StatCard label="Total sessions"   value={String(expert?.totalSessions ?? 0)} />
+          <StatCard label="Total sessions"   value={String(expert?.sessionCount ?? 0)} />
           <StatCard label="Total earned"     value={`$${totalEarned.toFixed(2)}`} accent />
           <StatCard label="Rating"           value={expert?.ratingAvg ? `${expert.ratingAvg.toFixed(1)}★` : '—'} sub={`${expert?.ratingCount ?? 0} reviews`} />
           <StatCard label="Rate"             value={`$${expert?.hourlyRate ?? 0}/hr`} />

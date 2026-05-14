@@ -5,7 +5,7 @@ export default async function AdminSessionsPage({ searchParams }: { searchParams
   const status = searchParams.status
 
   const sessions = await prisma.session.findMany({
-    where: status ? { status } : undefined,
+    where: status ? { status: status as any } : undefined,
     include: {
       category: { select: { name: true } },
       customer: { select: { name: true } },

@@ -22,7 +22,7 @@ export default function ResetPasswordPage() {
 
     const token = params.get('token') ?? ''
     const { error } = await resetPassword({ newPassword: password, token })
-    if (error) { setError(error.message); setLoading(false); return }
+    if (error) { setError(error.message ?? null); setLoading(false); return }
 
     router.push('/login?message=password_reset')
   }

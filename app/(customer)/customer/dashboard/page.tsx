@@ -21,14 +21,14 @@ export default async function CustomerDashboard() {
 
   const sessions = await prisma.session.findMany({
     where: { customerId: user.id },
-    include: { category: { select: { name: true, icon: true } }, expert: { select: { user: { select: { name: true } } } } },
+    include: { category: { select: { name: true, icon: true } }, expert: { select: { name: true } } },
     orderBy: { createdAt: 'desc' },
     take: 20,
   })
 
   const totalSessions = sessions.length
   const totalSpend    = sessions.filter(s => s.status === 'completed')
-                          .reduce((sum, s) => sum + (s.customerTotal ?? 0), 0)
+                          .reduce((sum, s) => sum + Number(s.customerTotal ?? 0), 0)
   const activeSession = sessions.find(s => s.status === 'active')
 
   return (

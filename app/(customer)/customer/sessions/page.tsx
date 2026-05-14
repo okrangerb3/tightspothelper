@@ -21,8 +21,8 @@ export default async function CustomerSessionsPage() {
     where: { customerId: user.id },
     include: {
       category: { select: { name: true, icon: true } },
-      expert: { select: { user: { select: { name: true } } } },
-      recordings: { select: { id: true, plan: true, expiresAt: true, deletedAt: true } },
+      expert: { select: { name: true } },
+      recordings: { select: { id: true, purchaseStatus: true, expiresAt: true } },
     },
     orderBy: { createdAt: 'desc' },
   })
@@ -62,7 +62,7 @@ export default async function CustomerSessionsPage() {
                   </div>
                   <p className="text-xs text-ink-500">
                     {s.category?.name}
-                    {s.expert?.user?.name ? ` · ${s.expert.user.name}` : ''}
+                    {s.expert?.name ? ` · ${s.expert.name}` : ''}
                     {s.durationBilledMinutes ? ` · ${s.durationBilledMinutes} min` : ''}
                     {' · '}{new Date(s.createdAt).toLocaleDateString()}
                   </p>

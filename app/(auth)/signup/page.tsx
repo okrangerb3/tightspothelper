@@ -57,7 +57,7 @@ export default function SignupPage() {
       fetchOptions: { body: JSON.stringify({ role }) },
     } as any)
 
-    if (authError) { setError(authError.message); setLoading(false); return }
+    if (authError) { setError(authError.message ?? null); setLoading(false); return }
 
     // After signup, update the role (better-auth sets default 'customer')
     // We pass role as an additional field — if better-auth doesn't pick it up from

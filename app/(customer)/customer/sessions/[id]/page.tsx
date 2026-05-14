@@ -13,8 +13,8 @@ export default async function SessionPage({ params }: { params: { id: string } }
     where: { id: params.id },
     include: {
       category: { select: { name: true, icon: true } },
-      customer: { select: { user: { select: { name: true } } } },
-      expert:   { select: { user: { select: { name: true } } } },
+      customer: { select: { name: true } },
+      expert:   { select: { name: true } },
     },
   })
 

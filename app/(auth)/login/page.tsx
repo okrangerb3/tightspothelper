@@ -21,7 +21,7 @@ export default function LoginPage() {
     setError(null)
 
     const { error: authError, data } = await signIn.email({ email, password })
-    if (authError) { setError(authError.message); setLoading(false); return }
+    if (authError) { setError(authError.message ?? null); setLoading(false); return }
 
     const role = (data?.user as any)?.role ?? 'customer'
     router.push(redirectTo ?? `/${role}/dashboard`)

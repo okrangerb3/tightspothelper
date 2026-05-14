@@ -21,7 +21,7 @@ export default function PaymentMethodsPage() {
 
   const [methods, setMethods]     = useState<PaymentMethod[]>([])
   const [loading, setLoading]     = useState(true)
-  const [adding, setAdding]       = useState(params.get('setup') === null && false)
+  const [adding, setAdding]       = useState(false)
   const [defaultId, setDefaultId] = useState<string | null>(null)
   const [acting, setActing]       = useState<string | null>(null)
   const [success, setSuccess]     = useState(params.get('setup') === 'complete')

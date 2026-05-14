@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { authClient } from '@/lib/auth-client'
+import { authClient, forgetPassword } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -50,7 +50,7 @@ export default function CustomerProfilePage() {
   }
 
   const changePassword = async () => {
-    await authClient.forgetPassword({ email, redirectTo: `${window.location.origin}/reset-password` })
+    await forgetPassword({ email, redirectTo: `${window.location.origin}/reset-password` })
     alert('Password reset email sent — check your inbox')
   }
 

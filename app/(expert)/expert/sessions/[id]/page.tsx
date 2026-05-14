@@ -21,7 +21,6 @@ export default async function ExpertSessionPage({ params }: { params: { id: stri
       session={session as any}
       userId={authSession.user.id}
       isExpert={true}
-      token={null}
     />
   )
 }

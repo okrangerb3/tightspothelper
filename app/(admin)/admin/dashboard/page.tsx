@@ -38,17 +38,16 @@ export default async function AdminDashboard() {
     }),
     prisma.recording.findMany({
       where: {
-        plan:      'free',
-        deletedAt: null,
+        purchaseStatus: 'free_window',
         expiresAt: { lte: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) },
       },
-      select: { id: true, sessionId: true, expiresAt: true, sizeBytes: true },
+      select: { id: true, sessionId: true, expiresAt: true, fileSizeBytes: true },
       take: 5,
     }),
   ])
 
-  const totalRevenue = revenueData.reduce((sum, s) => sum + (s.platformFeeAmount ?? 0), 0)
-  const totalGMV     = revenueData.reduce((sum, s) => sum + (s.customerTotal ?? 0), 0)
+  const totalRevenue = revenueData.reduce((sum, s) => sum + Number(s.platformFeeAmount ?? 0), 0)
+  const totalGMV     = revenueData.reduce((sum, s) => sum + Number(s.customerTotal ?? 0), 0)
 
   const STATUS_STYLE: Record<string, string> = {
     pending:   'bg-yellow-500/10 text-yellow-400',

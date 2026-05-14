@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-interface Category { id: string; name: string; fee_type: string; fee_value: number }
+interface Category { id: string; name: string; feeType: string; feeValue: number }
 interface Override  { id: string; category_id: string; override_value: number; starts_at: string; ends_at: string; category: { name: string } | null }
 
 export default function FeeOverrideManager({
