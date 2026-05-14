@@ -85,7 +85,6 @@ export default async function AdminRecordings() {
             )
           })}
         </div>
-      </div>
     </div>
   )
 }

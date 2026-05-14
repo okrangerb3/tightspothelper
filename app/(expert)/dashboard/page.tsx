@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { PageShell, StatCard } from '@/components/ui/Shell'
+import { StatCard } from '@/components/ui/Shell'
 
 export default async function ExpertDashboard() {
   const supabase = createClient()
@@ -20,29 +20,25 @@ export default async function ExpertDashboard() {
 
   if (expert?.status === 'pending') {
     return (
-      <PageShell role="expert" userName={profile?.full_name}>
-        <div className="p-8 max-w-lg">
+      <div className="p-8 max-w-lg">
           <div className="card p-8 text-center">
             <div className="text-4xl mb-4">⏳</div>
             <h2 className="font-display text-xl font-bold text-white mb-2">Application under review</h2>
             <p className="text-ink-400 text-sm">We're reviewing your application and running a background check. This usually takes 1–3 business days. We'll email you when it's done.</p>
           </div>
-        </div>
-      </PageShell>
+      </div>
     )
   }
 
   if (expert?.status === 'rejected') {
     return (
-      <PageShell role="expert" userName={profile?.full_name}>
-        <div className="p-8 max-w-lg">
+      <div className="p-8 max-w-lg">
           <div className="card p-8 text-center">
             <div className="text-4xl mb-4">❌</div>
             <h2 className="font-display text-xl font-bold text-white mb-2">Application not approved</h2>
             <p className="text-ink-400 text-sm">Unfortunately we weren't able to approve your application at this time. Contact support for more information.</p>
           </div>
-        </div>
-      </PageShell>
+      </div>
     )
   }
 
@@ -51,8 +47,7 @@ export default async function ExpertDashboard() {
   const active     = sessions?.find(s => s.status === 'active')
 
   return (
-    <PageShell role="expert" userName={profile?.full_name}>
-      <div className="p-8 max-w-5xl">
+    <div className="p-8 max-w-5xl">
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="font-display text-2xl font-bold text-white">
@@ -110,7 +105,6 @@ export default async function ExpertDashboard() {
             ))}
           </div>
         )}
-      </div>
-    </PageShell>
+    </div>
   )
 }

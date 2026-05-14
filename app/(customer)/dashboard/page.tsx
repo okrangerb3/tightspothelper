@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { PageShell, StatCard } from '@/components/ui/Shell'
+import { StatCard } from '@/components/ui/Shell'
 
 const STATUS_STYLE: Record<string, string> = {
   pending:   'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
@@ -33,8 +33,7 @@ export default async function CustomerDashboard() {
   const activeSession  = sessions?.find(s => s.status === 'active')
 
   return (
-    <PageShell role="customer" userName={profile?.full_name ?? user.email}>
-      <div className="p-8 max-w-5xl">
+    <div className="p-8 max-w-5xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -112,7 +111,6 @@ export default async function CustomerDashboard() {
             </div>
           )}
         </div>
-      </div>
-    </PageShell>
+    </div>
   )
 }

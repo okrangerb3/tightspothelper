@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { PageShell } from '@/components/ui/Shell'
 import FeeOverrideManager from './FeeOverrideManager'
 
 export default async function AdminFeeOverridesPage() {
@@ -21,8 +20,7 @@ export default async function AdminFeeOverridesPage() {
     .order('starts_at', { ascending: false })
 
   return (
-    <PageShell role="admin" userName={profile?.full_name}>
-      <div className="p-8 max-w-3xl">
+    <div className="p-8 max-w-3xl">
         <div className="mb-6">
           <h1 className="font-display text-2xl font-bold text-white">Fee overrides</h1>
           <p className="text-ink-400 text-sm mt-1">
@@ -30,7 +28,6 @@ export default async function AdminFeeOverridesPage() {
           </p>
         </div>
         <FeeOverrideManager categories={categories ?? []} overrides={overrides ?? []} />
-      </div>
-    </PageShell>
+    </div>
   )
 }
