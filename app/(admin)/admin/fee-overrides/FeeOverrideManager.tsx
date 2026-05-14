@@ -76,15 +76,15 @@ export default function FeeOverrideManager({
 
         <div>
           <label className="label">
-            Override fee value {selectedCat?.fee_type === 'percentage'
+            Override fee value {selectedCat?.feeType === 'percentage'
               ? `(${Math.round(form.override_value * 100)}%)`
               : `($${form.override_value})`}
           </label>
           <input
             type="range"
-            min={selectedCat?.fee_type === 'percentage' ? 0 : 0}
-            max={selectedCat?.fee_type === 'percentage' ? 0.5 : 50}
-            step={selectedCat?.fee_type === 'percentage' ? 0.01 : 0.5}
+            min={selectedCat?.feeType === 'percentage' ? 0 : 0}
+            max={selectedCat?.feeType === 'percentage' ? 0.5 : 50}
+            step={selectedCat?.feeType === 'percentage' ? 0.01 : 0.5}
             value={form.override_value}
             onChange={e => setForm(f => ({ ...f, override_value: parseFloat(e.target.value) }))}
             className="w-full"
@@ -114,7 +114,7 @@ export default function FeeOverrideManager({
           <div className="surface p-3 rounded-xl text-xs text-ink-400">
             During this period, <strong className="text-white">{selectedCat.name}</strong> sessions
             will use a fee of{' '}
-            <strong className="text-brand-400">{fmt(form.override_value, selectedCat.fee_type)}</strong>
+            <strong className="text-brand-400">{fmt(form.override_value, selectedCat.feeType)}</strong>
             {' '}instead of{' '}
             <strong className="text-ink-300">{fmt(selectedCat.feeValue, selectedCat.feeType)}</strong>
           </div>
@@ -142,7 +142,7 @@ export default function FeeOverrideManager({
                   <p className="text-sm font-medium text-white">
                     {ov.category?.name ?? '—'}
                     <span className="ml-2 text-brand-400 text-xs">
-                      {selectedCat?.fee_type === 'percentage'
+                      {selectedCat?.feeType === 'percentage'
                         ? `${Math.round(ov.override_value * 100)}%`
                         : `$${ov.override_value}`} fee
                     </span>
