@@ -75,7 +75,11 @@ export async function POST(req: NextRequest) {
         },
       ])
 
-      console.log(`Recording stored for session ${session.id}`)
+      // Track storage usage for customer's subscription (if they have one)
+      await supabase.rpc('increment_storage_used', {
+        p_user_id: session.customer_id,
+        p_bytes:   sizeBytes,
+      }).catch(() => {}) // Non-fatal — free tier has no subscription row
     } catch (err) {
       console.error('Recording storage error:', err)
       return NextResponse.json({ error: 'Storage failed' }, { status: 500 })

@@ -8,10 +8,12 @@ interface NavItem { href: string; label: string; icon: string }
 
 const NAV: Record<string, NavItem[]> = {
   customer: [
-    { href: '/customer/dashboard', label: 'Dashboard',   icon: '◈' },
-    { href: '/customer/book',      label: 'Get help',    icon: '＋' },
-    { href: '/customer/sessions',  label: 'Sessions',    icon: '▤' },
-    { href: '/customer/storage',   label: 'Storage',     icon: '◷' },
+    { href: '/customer/dashboard',       label: 'Dashboard',   icon: '◈' },
+    { href: '/customer/book',            label: 'Get help',    icon: '＋' },
+    { href: '/customer/sessions',        label: 'Sessions',    icon: '▤' },
+    { href: '/customer/storage',         label: 'Storage',     icon: '◷' },
+    { href: '/customer/payment-methods', label: 'Billing',     icon: '◎' },
+    { href: '/customer/profile',         label: 'Profile',     icon: '◉' },
   ],
   expert: [
     { href: '/expert/dashboard',   label: 'Dashboard',   icon: '◈' },
@@ -24,6 +26,7 @@ const NAV: Record<string, NavItem[]> = {
     { href: '/admin/sessions',     label: 'Sessions',    icon: '▤' },
     { href: '/admin/pros',         label: 'Pros',        icon: '◉' },
     { href: '/admin/categories',   label: 'Categories',  icon: '◧' },
+    { href: '/admin/fee-overrides',label: 'Promos',      icon: '◐' },
     { href: '/admin/recordings',   label: 'Recordings',  icon: '◷' },
   ],
 }

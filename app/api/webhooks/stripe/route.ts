@@ -17,6 +17,38 @@ export async function POST(req: NextRequest) {
 
   switch (event.type) {
 
+    // ── SetupIntent succeeded — card saved ───────────────────
+    case 'setup_intent.succeeded': {
+      // Card saved for future use — no action needed
+      // The payment method is already attached to the customer in Stripe
+      console.log('SetupIntent succeeded:', event.data.object.id)
+      break
+    }
+
+    // ── New storage subscription created ─────────────────────
+    case 'customer.subscription.created': {
+      const sub  = event.data.object
+      const tier = (sub.metadata?.tier ?? 'basic') as string
+      const limitMap: Record<string, number> = {
+        basic:     10 * 1024 ** 3,
+        pro:       50 * 1024 ** 3,
+        unlimited: -1,
+      }
+      const { data: profile } = await admin
+        .from('profiles').select('id').eq('stripe_customer_id', sub.customer).single()
+      if (profile) {
+        await admin.from('storage_subscriptions').upsert({
+          user_id:                profile.id,
+          tier,
+          stripe_subscription_id: sub.id,
+          storage_limit_bytes:    limitMap[tier] ?? 10 * 1024 ** 3,
+          storage_used_bytes:     0,
+          started_at:             new Date(sub.start_date * 1000).toISOString(),
+        }, { onConflict: 'stripe_subscription_id' })
+      }
+      break
+    }
+
     // ── Session payment captured ─────────────────────────────
     case 'payment_intent.succeeded': {
       const pi = event.data.object

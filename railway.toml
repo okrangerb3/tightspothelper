@@ -15,15 +15,31 @@ name = "web"
 [services.variables]
 PORT = "3000"
 
-[cron]
-# Daily recording expiry job — runs at 3am UTC
+# ── Cron jobs ─────────────────────────────────────────────────
+# All cron endpoints require Authorization: Bearer $CRON_SECRET
+
 [[cron.jobs]]
 name = "expire-recordings"
+# Daily at 3am UTC — deletes free tier recordings past 30-day window from R2
 schedule = "0 3 * * *"
-command = "curl -s -X POST http://localhost:3000/api/cron/expire-recordings -H 'Authorization: Bearer $CRON_SECRET'"
+command = "curl -sf -X POST $RAILWAY_PUBLIC_DOMAIN/api/cron/expire-recordings -H 'Authorization: Bearer $CRON_SECRET'"
 
-# Day-25 upsell email job — runs at 9am UTC
 [[cron.jobs]]
 name = "recording-upsell"
+# Daily at 9am UTC — sends Day-25 keep-recording upsell emails via Resend
 schedule = "0 9 * * *"
-command = "curl -s -X POST http://localhost:3000/api/cron/recording-upsell -H 'Authorization: Bearer $CRON_SECRET'"
+command = "curl -sf -X POST $RAILWAY_PUBLIC_DOMAIN/api/cron/recording-upsell -H 'Authorization: Bearer $CRON_SECRET'"
+
+# ── Webhook endpoints (configure in each service dashboard) ───
+# Stripe:  https://tightspothelper.com/api/webhooks/stripe
+#   Events: payment_intent.succeeded, payment_intent.payment_failed,
+#           customer.subscription.created, customer.subscription.updated,
+#           customer.subscription.deleted, account.updated,
+#           setup_intent.succeeded
+#
+# Daily.co: https://tightspothelper.com/api/webhooks/daily
+#   Events: recording.ready-to-download, recording.error,
+#           meeting.ended, participant.joined, participant.left
+#
+# Checkr:  https://tightspothelper.com/api/webhooks/checkr
+#   Events: report.completed, report.upgraded

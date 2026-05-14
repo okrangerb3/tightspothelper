@@ -37,8 +37,8 @@ export async function deleteObject(key: string) {
   await r2.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }))
 }
 
-/** Stream a recording from Daily.co URL into R2 */
-export async function storeRecordingFromUrl(url: string, key: string) {
+/** Stream a recording from Daily.co URL into R2, returns size in bytes */
+export async function storeRecordingFromUrl(url: string, key: string): Promise<number> {
   const response = await fetch(url)
   if (!response.ok) throw new Error(`Failed to fetch recording: ${response.statusText}`)
   const buffer = await response.arrayBuffer()
