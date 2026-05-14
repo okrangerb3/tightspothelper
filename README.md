@@ -53,6 +53,20 @@ npx prisma migrate deploy
 npm run db:seed
 ```
 
+If you see a DATABASE_URL error, add DATABASE_URL to .env.local (or .env), or run the seed with Railway-provided variables:
+
+```bash
+railway run npm run db:seed
+```
+
+### Demo Users (Seeded)
+
+After running `npm run db:seed`, you can log in with these demo accounts:
+
+- Customer: `customer@demo.test` / `password123`
+- Expert: `expert@demo.test` / `password123`
+- Admin: `admin@demo.test` / `password123`
+
 ### 4. Stripe
 
 1. Create account at [stripe.com](https://stripe.com)

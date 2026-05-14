@@ -5,8 +5,40 @@
 
 import { PrismaClient } from '@prisma/client'
 import { randomBytes, randomUUID, scrypt } from 'crypto'
+import { existsSync, readFileSync } from 'fs'
+import { resolve } from 'path'
 
 const prisma = new PrismaClient()
+
+function loadEnvFile(filePath: string) {
+  const absolutePath = resolve(process.cwd(), filePath)
+  if (!existsSync(absolutePath)) return
+
+  const file = readFileSync(absolutePath, 'utf8')
+  for (const rawLine of file.split('\n')) {
+    const line = rawLine.trim()
+    if (!line || line.startsWith('#')) continue
+
+    const equalsIndex = line.indexOf('=')
+    if (equalsIndex < 1) continue
+
+    const key = line.slice(0, equalsIndex).trim()
+    if (!key || process.env[key]) continue
+
+    let value = line.slice(equalsIndex + 1).trim()
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+
+    process.env[key] = value
+  }
+}
+
+loadEnvFile('.env.local')
+loadEnvFile('.env')
 
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString('hex')
@@ -32,7 +64,7 @@ async function hashPassword(password: string) {
   return `${salt}:${key.toString('hex')}`
 }
 
-async function createDemoUser(params: { email: string; password: string; name: string; role?: 'customer' | 'expert' }) {
+async function createDemoUser(params: { email: string; password: string; name: string; role?: 'customer' | 'expert' | 'admin' }) {
   const { email, password, name, role = 'customer' } = params
   const userId = randomUUID()
   const hashedPassword = await hashPassword(password)
@@ -71,6 +103,12 @@ async function createDemoUser(params: { email: string; password: string; name: s
 }
 
 async function main() {
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      'DATABASE_URL is not set. Add it to .env.local, .env, or run the command with Railway environment variables.',
+    )
+  }
+
   console.log('Seeding categories...')
 
   const categories = [
@@ -160,6 +198,14 @@ async function main() {
     role: 'expert',
   })
 
+  // Demo admin
+  await createDemoUser({
+    email: 'admin@demo.test',
+    password: 'password123',
+    name: 'Taylor Admin',
+    role: 'admin',
+  })
+
   await prisma.expertProfile.upsert({
     where: { id: expert.id },
     update: {
@@ -187,6 +233,7 @@ async function main() {
   })
   console.log('  ✓ Demo expert (expert@demo.test / password123)')
   console.log('  ✓ Demo customer (customer@demo.test / password123)')
+  console.log('  ✓ Demo admin (admin@demo.test / password123)')
 
   console.log('\n✅ Seed complete')
 }

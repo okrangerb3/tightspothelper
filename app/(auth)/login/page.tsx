@@ -21,12 +21,21 @@ function LoginPageContent() {
     setLoading(true)
     setError(null)
 
-    const { error: authError, data } = await signIn.email({ email, password })
-    if (authError) { setError(authError.message ?? null); setLoading(false); return }
+    try {
+      const { error: authError, data } = await signIn.email({ email, password })
+      if (authError) {
+        setError(authError.message ?? 'Unable to sign in. Please try again.')
+        return
+      }
 
-    const role = (data?.user as any)?.role ?? 'customer'
-    router.push(redirectTo ?? `/${role}/dashboard`)
-    router.refresh()
+      const role = (data?.user as any)?.role ?? 'customer'
+      router.push(redirectTo ?? `/${role}/dashboard`)
+      router.refresh()
+    } catch {
+      setError('Unable to sign in right now. Please check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleOAuth = async (provider: 'google' | 'apple') => {
