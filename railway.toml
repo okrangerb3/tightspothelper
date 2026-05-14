@@ -15,6 +15,7 @@ name = "web"
 
 [services.variables]
 PORT = "3000"
+NIXPACKS_NODE_VERSION = "20.19.0"
 
 # ── Cron jobs ─────────────────────────────────────────────────
 # All cron endpoints require Authorization: Bearer $CRON_SECRET
