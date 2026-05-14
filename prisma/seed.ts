@@ -4,9 +4,48 @@
 // ============================================================
 
 import { PrismaClient } from '@prisma/client'
-import { auth } from '../lib/auth'
+import { hashPassword } from '@better-auth/utils/password'
+import { randomUUID } from 'crypto'
 
 const prisma = new PrismaClient()
+
+async function createDemoUser(params: { email: string; password: string; name: string; role?: 'customer' | 'expert' }) {
+  const { email, password, name, role = 'customer' } = params
+  const userId = randomUUID()
+  const hashedPassword = await hashPassword(password)
+
+  const user = await prisma.authUser.upsert({
+    where: { email },
+    update: {
+      name,
+      role,
+      emailVerified: true,
+    },
+    create: {
+      id: userId,
+      name,
+      email,
+      emailVerified: true,
+      role,
+    },
+  })
+
+  await prisma.authAccount.upsert({
+    where: { id: `${user.id}-credential` },
+    update: {
+      password: hashedPassword,
+    },
+    create: {
+      id: `${user.id}-credential`,
+      accountId: user.id,
+      providerId: 'credential',
+      userId: user.id,
+      password: hashedPassword,
+    },
+  })
+
+  return user
+}
 
 async function main() {
   console.log('Seeding categories...')
@@ -44,6 +83,16 @@ async function main() {
       feeType: 'percentage' as const, feeValue: 0.15, rateMin: 25, rateMax: 150,
       description: 'Misc repairs and installs',
     },
+    {
+      name: 'Automotive',    slug: 'automotive',    icon: 'ti-car',
+      feeType: 'percentage' as const, feeValue: 0.20, rateMin: 50, rateMax: 250,
+      description: 'Diagnostics, repairs, and maintenance',
+    },
+    {
+      name: 'Marine',        slug: 'marine',        icon: 'ti-ship',
+      feeType: 'percentage' as const, feeValue: 0.20, rateMin: 60, rateMax: 300,
+      description: 'Boats, engines, and dockside repairs',
+    },
   ]
 
   for (let i = 0; i < categories.length; i++) {
@@ -70,44 +119,47 @@ async function main() {
   console.log('\nSeeding demo users...')
 
   // Demo customer
-  const customer = await auth.api.signUpEmail({
-    body: { email: 'customer@demo.test', password: 'password123', name: 'Jamie Homeowner' },
-  }).catch(() => null)
+  const customer = await createDemoUser({
+    email: 'customer@demo.test',
+    password: 'password123',
+    name: 'Jamie Homeowner',
+    role: 'customer',
+  })
 
   // Demo expert
-  const expert = await auth.api.signUpEmail({
-    body: { email: 'expert@demo.test', password: 'password123', name: 'Alex Plumber' },
-  }).catch(() => null)
+  const expert = await createDemoUser({
+    email: 'expert@demo.test',
+    password: 'password123',
+    name: 'Alex Plumber',
+    role: 'expert',
+  })
 
-  if (expert) {
-    await prisma.authUser.update({
-      where: { email: 'expert@demo.test' },
-      data:  { role: 'expert' },
-    })
-    const expertUser = await prisma.authUser.findUnique({ where: { email: 'expert@demo.test' } })
-    if (expertUser) {
-      await prisma.expertProfile.upsert({
-        where:  { id: expertUser.id },
-        update: {},
-        create: {
-          id:                    expertUser.id,
-          status:                'approved',
-          bio:                   'Licensed master plumber with 12 years of residential & commercial experience.',
-          yearsExperience:       12,
-          certifications:        ['Master Plumber License CA-MP-44821'],
-          hourlyRate:            120,
-          available:             true,
-          stripeConnectOnboarded: false,
-          backgroundCheckPassed:  true,
-        },
-      })
-      console.log('  ✓ Demo expert (expert@demo.test / password123)')
-    }
-  }
-
-  if (customer) {
-    console.log('  ✓ Demo customer (customer@demo.test / password123)')
-  }
+  await prisma.expertProfile.upsert({
+    where: { id: expert.id },
+    update: {
+      status: 'approved',
+      bio: 'Licensed master plumber with 12 years of residential & commercial experience.',
+      yearsExperience: 12,
+      certifications: ['Master Plumber License CA-MP-44821'],
+      hourlyRate: 120,
+      available: true,
+      stripeConnectOnboarded: false,
+      backgroundCheckPassed: true,
+    },
+    create: {
+      id: expert.id,
+      status: 'approved',
+      bio: 'Licensed master plumber with 12 years of residential & commercial experience.',
+      yearsExperience: 12,
+      certifications: ['Master Plumber License CA-MP-44821'],
+      hourlyRate: 120,
+      available: true,
+      stripeConnectOnboarded: false,
+      backgroundCheckPassed: true,
+    },
+  })
+  console.log('  ✓ Demo expert (expert@demo.test / password123)')
+  console.log('  ✓ Demo customer (customer@demo.test / password123)')
 
   console.log('\n✅ Seed complete')
 }

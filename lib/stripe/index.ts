@@ -39,8 +39,9 @@ export async function createSessionPaymentIntent(params: {
   amountCents: number         // Customer total in cents
   payoutCents: number         // Expert payout in cents
   sessionId: string
+  paymentMethodId?: string
 }) {
-  const { customerId, expertConnectId, amountCents, payoutCents, sessionId } = params
+  const { customerId, expertConnectId, amountCents, payoutCents, sessionId, paymentMethodId } = params
 
   return stripe.paymentIntents.create({
     amount: amountCents,
@@ -51,6 +52,13 @@ export async function createSessionPaymentIntent(params: {
       destination: expertConnectId,
       amount: payoutCents,
     },
+    ...(paymentMethodId
+      ? {
+          payment_method: paymentMethodId,
+          confirm: true,
+          off_session: true,
+        }
+      : {}),
     metadata: { sessionId },
     description: `TightSpotHelper session ${sessionId}`,
   })

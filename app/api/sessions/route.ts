@@ -33,6 +33,12 @@ export async function POST(req: NextRequest) {
   if (!category) return NextResponse.json({ error: 'Category not found' }, { status: 404 })
   if (!expert || expert.status !== 'approved')
     return NextResponse.json({ error: 'Expert unavailable' }, { status: 400 })
+  if (!expert.stripeConnectId || !expert.stripeConnectOnboarded) {
+    return NextResponse.json(
+      { error: 'Expert payout account is not configured' },
+      { status: 400 },
+    )
+  }
 
   // Ensure Stripe customer exists
   const customerUser = await prisma.authUser.findUnique({ where: { id: auth.user.id } })
@@ -49,6 +55,27 @@ export async function POST(req: NextRequest) {
       where: { id: auth.user.id },
       data:  { stripeCustomerId: sc.id },
     })
+  }
+
+  const [customer, paymentMethods] = await Promise.all([
+    stripe.customers.retrieve(stripeCustomerId),
+    stripe.customers.listPaymentMethods(stripeCustomerId, { type: 'card', limit: 10 }),
+  ])
+
+  const defaultPaymentMethodId =
+    typeof customer !== 'string' && !customer.deleted
+      ? (customer.invoice_settings?.default_payment_method as string | null)
+      : null
+
+  const paymentMethod =
+    (defaultPaymentMethodId && paymentMethods.data.find(method => method.id === defaultPaymentMethodId)) ||
+    paymentMethods.data[0]
+
+  if (!paymentMethod) {
+    return NextResponse.json(
+      { error: 'No saved payment method found', redirectTo: '/customer/payment-methods' },
+      { status: 402 },
+    )
   }
 
   // Active fee override check
@@ -71,16 +98,31 @@ export async function POST(req: NextRequest) {
     flatTiers: category.feeFlatTiers as any ?? undefined,
   })
 
+  const sessionId = crypto.randomUUID()
+
   const paymentIntent = await createSessionPaymentIntent({
     customerId:      stripeCustomerId,
-    expertConnectId: expert.stripeConnectId!,
+    expertConnectId: expert.stripeConnectId,
     amountCents:     Math.round(pricing.customerTotal * 100),
     payoutCents:     Math.round(pricing.expertPayout  * 100),
-    sessionId:       crypto.randomUUID(),
+    sessionId,
+    paymentMethodId: paymentMethod.id,
   })
+
+  if (paymentIntent.status !== 'requires_capture') {
+    return NextResponse.json(
+      {
+        error: 'Payment requires customer action',
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentStatus: paymentIntent.status,
+      },
+      { status: 402 },
+    )
+  }
 
   const newSession = await prisma.session.create({
     data: {
+      id:                   sessionId,
       customerId:           auth.user.id,
       expertId,
       categoryId,
@@ -94,7 +136,7 @@ export async function POST(req: NextRequest) {
       problemTitle,
       problemDescription,
       stripePaymentIntentId: paymentIntent.id,
-      paymentStatus:        'held',
+      paymentStatus:         'held',
     },
   })
 
