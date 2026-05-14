@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Syne';
+  --font-body:    'DM Sans';
+  --font-mono:    'DM Mono';
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-ink-950 text-ink-100 font-sans;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  ::selection {
+    @apply bg-brand-500 text-white;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar       { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-ink-900; }
+  ::-webkit-scrollbar-thumb { @apply bg-ink-600 rounded-full; }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2
+           bg-brand-500 hover:bg-brand-400 active:bg-brand-600
+           text-white font-sans font-medium text-sm
+           px-5 py-2.5 rounded-xl
+           transition-all duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 focus-visible:ring-offset-ink-950
+           disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2
+           bg-transparent hover:bg-ink-800 active:bg-ink-700
+           text-ink-300 hover:text-ink-100
+           font-sans font-medium text-sm
+           px-5 py-2.5 rounded-xl border border-ink-700 hover:border-ink-600
+           transition-all duration-150
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink-500;
+  }
+
+  /* Form inputs */
+  .input {
+    @apply w-full bg-ink-900 border border-ink-700
+           text-ink-100 placeholder:text-ink-500
+           rounded-xl px-4 py-3 text-sm font-sans
+           transition-colors duration-150
+           focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .label {
+    @apply block text-xs font-medium text-ink-400 mb-1.5 tracking-wide;
+  }
+
+  /* Card */
+  .card {
+    @apply bg-ink-900 border border-ink-800 rounded-2xl;
+  }
+
+  /* Surface (slightly lighter card) */
+  .surface {
+    @apply bg-ink-800/50 border border-ink-700/50 rounded-2xl;
+  }
+
+  /* Section container */
+  .container-page {
+    @apply max-w-6xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Stagger animation delays for children */
+.stagger > *:nth-child(1) { animation-delay: 0ms; }
+.stagger > *:nth-child(2) { animation-delay: 80ms; }
+.stagger > *:nth-child(3) { animation-delay: 160ms; }
+.stagger > *:nth-child(4) { animation-delay: 240ms; }
+.stagger > *:nth-child(5) { animation-delay: 320ms; }

@@ -1,0 +1,29 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "npm run build"
+
+[deploy]
+startCommand = "npm run start"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[[services]]
+name = "web"
+
+[services.variables]
+PORT = "3000"
+
+[cron]
+# Daily recording expiry job — runs at 3am UTC
+[[cron.jobs]]
+name = "expire-recordings"
+schedule = "0 3 * * *"
+command = "curl -s -X POST http://localhost:3000/api/cron/expire-recordings -H 'Authorization: Bearer $CRON_SECRET'"
+
+# Day-25 upsell email job — runs at 9am UTC
+[[cron.jobs]]
+name = "recording-upsell"
+schedule = "0 9 * * *"
+command = "curl -s -X POST http://localhost:3000/api/cron/recording-upsell -H 'Authorization: Bearer $CRON_SECRET'"
