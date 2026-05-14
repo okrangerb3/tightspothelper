@@ -1,27 +1,27 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
+import { prisma } from '@/lib/db'
 import { StatCard } from '@/components/ui/Shell'
 import RecordingActions from './RecordingActions'
 
 export default async function AdminRecordings() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-  const { data: profile } = await supabase.from('profiles').select('role,full_name').eq('id', user.id).single()
-  if (profile?.role !== 'admin') redirect('/customer/dashboard')
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
+  if ((session.user as any).role !== 'admin') redirect('/customer/dashboard')
 
-  const { data: recordings } = await supabase
-    .from('recordings')
-    .select('*, session:session_id(problem_title, customer_id, expert_id, customer:customer_id(full_name))')
-    .order('created_at', { ascending: false })
-    .limit(50)
+  const recordings = await prisma.recording.findMany({
+    include: { session: { select: { problemTitle: true, customerId: true, expertId: true, customer: { select: { name: true } } } } },
+    orderBy: { createdAt: 'desc' },
+    take: 50,
+  })
 
-  const totalBytes  = recordings?.reduce((sum, r) => sum + (r.size_bytes ?? 0), 0) ?? 0
-  const freeBytes   = recordings?.filter(r => r.plan === 'free' && !r.deleted_at).reduce((sum, r) => sum + (r.size_bytes ?? 0), 0) ?? 0
-  const paidBytes   = recordings?.filter(r => r.plan !== 'free').reduce((sum, r) => sum + (r.size_bytes ?? 0), 0) ?? 0
-  const r2Cost      = totalBytes / 1024 / 1024 / 1024 * 0.015
-  const expiringCount = recordings?.filter(r => r.plan === 'free' && !r.deleted_at && r.expires_at &&
-    new Date(r.expires_at) < new Date(Date.now() + 7 * 86400000)).length ?? 0
+  const totalBytes    = recordings.reduce((sum, r) => sum + (r.sizeBytes ?? 0), 0)
+  const freeBytes     = recordings.filter(r => r.plan === 'free' && !r.deletedAt).reduce((sum, r) => sum + (r.sizeBytes ?? 0), 0)
+  const paidBytes     = recordings.filter(r => r.plan !== 'free').reduce((sum, r) => sum + (r.sizeBytes ?? 0), 0)
+  const r2Cost        = totalBytes / 1024 / 1024 / 1024 * 0.015
+  const expiringCount = recordings.filter(r => r.plan === 'free' && !r.deletedAt && r.expiresAt &&
+    new Date(r.expiresAt) < new Date(Date.now() + 7 * 86400000)).length
 
   const fmt = (bytes: number) => bytes > 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${(bytes / 1e6).toFixed(0)} MB`
 
@@ -49,36 +49,36 @@ export default async function AdminRecordings() {
         )}
 
         <div className="space-y-2">
-          {recordings?.map(rec => {
-            const daysLeft = rec.expires_at
-              ? Math.ceil((new Date(rec.expires_at).getTime() - Date.now()) / 86400000)
+          {recordings.map(rec => {
+            const daysLeft = rec.expiresAt
+              ? Math.ceil((new Date(rec.expiresAt).getTime() - Date.now()) / 86400000)
               : null
 
             return (
-              <div key={rec.id} className={`card p-4 ${rec.deleted_at ? 'opacity-40' : ''}`}>
+              <div key={rec.id} className={`card p-4 ${rec.deletedAt ? 'opacity-40' : ''}`}>
                 <div className="flex items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-ink-100 truncate">
-                      {(rec.session as any)?.problem_title ?? 'Session'}
+                      {rec.session?.problemTitle ?? 'Session'}
                     </p>
                     <p className="text-xs text-ink-500 mt-0.5">
-                      {(rec.session as any)?.customer?.full_name ?? '—'}
-                      {' · '}{rec.duration_seconds ? `${Math.floor(rec.duration_seconds / 60)}m` : '—'}
-                      {' · '}{fmt(rec.size_bytes ?? 0)}
+                      {rec.session?.customer?.name ?? '—'}
+                      {' · '}{rec.durationSeconds ? `${Math.floor(rec.durationSeconds / 60)}m` : '—'}
+                      {' · '}{fmt(rec.sizeBytes ?? 0)}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0">
-                    {daysLeft !== null && !rec.deleted_at && (
+                    {daysLeft !== null && !rec.deletedAt && (
                       <span className={`text-xs ${daysLeft <= 5 ? 'text-red-400' : daysLeft <= 10 ? 'text-yellow-400' : 'text-ink-500'}`}>
-                        {rec.deleted_at ? 'Deleted' : daysLeft > 0 ? `${daysLeft}d left` : 'Expired'}
+                        {rec.deletedAt ? 'Deleted' : daysLeft > 0 ? `${daysLeft}d left` : 'Expired'}
                       </span>
                     )}
-                    {rec.deleted_at && <span className="text-xs text-ink-600">Deleted</span>}
+                    {rec.deletedAt && <span className="text-xs text-ink-600">Deleted</span>}
                     <span className={`text-[10px] px-2 py-0.5 rounded-full ${PLAN_STYLE[rec.plan]}`}>
                       {rec.plan.replace('_', ' ')}
                     </span>
-                    {!rec.deleted_at && <RecordingActions recordingId={rec.id} plan={rec.plan} />}
+                    {!rec.deletedAt && <RecordingActions recordingId={rec.id} plan={rec.plan} />}
                   </div>
                 </div>
               </div>

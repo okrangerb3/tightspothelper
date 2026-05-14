@@ -1,35 +1,28 @@
 import { redirect, notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
+import { prisma } from '@/lib/db'
 import SessionRoom from '@/app/(customer)/sessions/[id]/SessionRoom'
 
 export default async function ExpertSessionPage({ params }: { params: { id: string } }) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const authSession = await auth.api.getSession({ headers: headers() })
+  if (!authSession) redirect('/login')
 
-  const { data: session } = await supabase
-    .from('sessions')
-    .select('*, category:category_id(name,icon)')
-    .eq('id', params.id)
-    .single()
+  const session = await prisma.session.findUnique({
+    where:   { id: params.id },
+    include: { category: { select: { name: true, icon: true } } },
+  })
 
   if (!session) notFound()
-  if (session.expert_id !== user.id) redirect('/expert/sessions')
-
-  // Get Daily meeting token
-  const tokenRes = await fetch(
-    `${process.env.NEXT_PUBLIC_APP_URL}/api/sessions/${params.id}/token`,
-    { method: 'POST', cache: 'no-store' }
-  ).catch(() => null)
-
-  const { token } = tokenRes?.ok ? await tokenRes.json() : { token: null }
+  if (session.expertId !== authSession.user.id) redirect('/expert/sessions')
 
   return (
     <SessionRoom
-      session={session}
-      userId={user.id}
+      session={session as any}
+      userId={authSession.user.id}
       isExpert={true}
-      token={token}
+      token={null}
     />
   )
 }
+

@@ -1,15 +1,15 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
+import { prisma } from '@/lib/db'
 import CategoryEditor from './CategoryEditor'
 
 export default async function AdminCategories() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-  const { data: profile } = await supabase.from('profiles').select('role,full_name').eq('id', user.id).single()
-  if (profile?.role !== 'admin') redirect('/customer/dashboard')
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
+  if ((session.user as any).role !== 'admin') redirect('/customer/dashboard')
 
-  const { data: categories } = await supabase.from('categories').select('*').order('sort_order')
+  const categories = await prisma.category.findMany({ orderBy: { sortOrder: 'asc' } })
 
   return (
     <div className="p-8 max-w-4xl">
@@ -17,7 +17,7 @@ export default async function AdminCategories() {
           <h1 className="font-display text-2xl font-bold text-white">Category fees</h1>
           <p className="text-ink-400 text-sm mt-1">Set fee type, value, and rate guardrails per category. Changes apply to all new bookings immediately.</p>
         </div>
-        <CategoryEditor categories={categories ?? []} />
+        <CategoryEditor categories={categories} />
     </div>
   )
 }

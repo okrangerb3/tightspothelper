@@ -1,24 +1,19 @@
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { prisma } from '@/lib/db'
 
 export default async function AdminSessionsPage({ searchParams }: { searchParams: { status?: string } }) {
-  const supabase = createClient()
-  const status   = searchParams.status
+  const status = searchParams.status
 
-  let query = supabase.from('sessions')
-    .select(`
-      id, status, problem_title, customer_total, platform_fee_amount,
-      duration_billed_minutes, created_at, payment_status,
-      category:category_id(name),
-      customer:customer_id(full_name),
-      expert:expert_id(full_name)
-    `)
-    .order('created_at', { ascending: false })
-    .limit(100)
-
-  if (status) query = query.eq('status', status)
-
-  const { data: sessions } = await query
+  const sessions = await prisma.session.findMany({
+    where: status ? { status } : undefined,
+    include: {
+      category: { select: { name: true } },
+      customer: { select: { name: true } },
+      expert:   { select: { name: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 100,
+  })
 
   const STATUSES = ['all','active','pending','completed','disputed','cancelled']
   const STATUS_STYLE: Record<string,string> = {
@@ -46,21 +41,21 @@ export default async function AdminSessionsPage({ searchParams }: { searchParams
       </div>
 
       <div className="space-y-1.5">
-        {sessions?.map(s => (
+        {sessions.map(s => (
           <Link key={s.id} href={`/admin/sessions/${s.id}`}
             className="card p-4 flex items-center gap-4 hover:border-ink-700 transition-colors group">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-ink-100 truncate">{s.problem_title ?? 'Session'}</p>
+              <p className="text-sm font-medium text-ink-100 truncate">{s.problemTitle ?? 'Session'}</p>
               <p className="text-xs text-ink-500 mt-0.5">
-                {(s.customer as any)?.full_name ?? '—'} → {(s.expert as any)?.full_name ?? 'Unassigned'}
-                {' · '}{(s.category as any)?.name}
-                {s.duration_billed_minutes ? ` · ${s.duration_billed_minutes}m` : ''}
-                {' · '}{new Date(s.created_at).toLocaleDateString()}
+                {s.customer?.name ?? '—'} → {s.expert?.name ?? 'Unassigned'}
+                {' · '}{s.category?.name}
+                {s.durationBilledMins ? ` · ${s.durationBilledMins}m` : ''}
+                {' · '}{new Date(s.createdAt).toLocaleDateString()}
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              {s.platform_fee_amount && <span className="text-xs text-brand-400">${(s.platform_fee_amount as number).toFixed(2)} fee</span>}
-              {s.customer_total    && <span className="text-xs text-ink-400">${(s.customer_total as number).toFixed(2)} total</span>}
+              {s.platformFeeAmount && <span className="text-xs text-brand-400">${s.platformFeeAmount.toFixed(2)} fee</span>}
+              {s.customerTotal     && <span className="text-xs text-ink-400">${s.customerTotal.toFixed(2)} total</span>}
               <span className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_STYLE[s.status]}`}>{s.status}</span>
               <span className="text-ink-600 group-hover:text-ink-400">→</span>
             </div>
