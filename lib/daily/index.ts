@@ -1,3 +1,7 @@
+// Removed — project uses Jitsi + Jibri (no Daily.co)
+export {}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const DAILY_API = 'https://api.daily.co/v1'
 const headers = {
   'Content-Type': 'application/json',

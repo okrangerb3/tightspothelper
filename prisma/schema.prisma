@@ -53,10 +53,11 @@ enum PhotoStage {
   during
 }
 
-enum StorageTier {
-  basic
-  pro
-  unlimited
+enum RecordingPurchaseStatus {
+  free_window
+  purchased
+  expired
+  deleted
 }
 
 // ── better-auth tables ────────────────────────────────────────
@@ -87,7 +88,7 @@ model AuthUser {
   reviewsGiven     Review[]       @relation("ReviewsGiven")
   reviewsReceived  Review[]       @relation("ReviewsReceived")
   notifications    Notification[]
-  storageUsage     StorageUsage?
+  recordingsPurchased Recording[] @relation("RecordingsPurchased")
 
   @@map("auth_users")
 }
@@ -270,16 +271,22 @@ model SessionPhoto {
 // ── Recordings ────────────────────────────────────────────────
 
 model Recording {
-  id              String    @id @default(uuid())
-  sessionId       String
-  session         Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  r2KeyOriginal   String?
-  r2KeyBackup     String?
-  durationSeconds Int?
-  fileSizeBytes   BigInt?
-  expiresAt       DateTime?
-  downloadCount   Int       @default(0)
-  createdAt       DateTime  @default(now())
+  id                    String                  @id @default(uuid())
+  sessionId             String
+  session               Session                 @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  r2KeyOriginal         String?
+  r2KeyBackup           String?
+  durationSeconds       Int?
+  fileSizeBytes         BigInt?
+  expiresAt             DateTime?
+  downloadCount         Int                     @default(0)
+  purchaseStatus        RecordingPurchaseStatus @default(free_window)
+  stripePaymentIntentId String?
+  purchasedAt           DateTime?
+  purchasedBy           String?
+  purchasedByUser       AuthUser?               @relation("RecordingsPurchased", fields: [purchasedBy], references: [id])
+  priceCents            Int?
+  createdAt             DateTime                @default(now())
 
   @@map("recordings")
 }
@@ -338,18 +345,4 @@ model Notification {
   @@map("notifications")
 }
 
-// ── Storage usage ─────────────────────────────────────────────
 
-model StorageUsage {
-  id                 String      @id @default(uuid())
-  userId             String      @unique
-  user               AuthUser    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan               StorageTier @default(basic)
-  usedBytes          BigInt      @default(0)
-  stripeSubId        String?
-  subscriptionEndsAt DateTime?
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
-
-  @@map("storage_usage")
-}

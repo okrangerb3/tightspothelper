@@ -36,6 +36,7 @@ interface SidebarProps { role: 'customer' | 'expert' | 'admin'; userName?: strin
 export function Sidebar({ role, userName }: SidebarProps) {
   const pathname = usePathname()
   const router   = useRouter()
+  const items    = NAV[role] ?? []
   const signOut = async () => {
     await authClient.signOut()
     router.push('/login')

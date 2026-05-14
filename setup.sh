@@ -34,9 +34,7 @@ command -v node &>/dev/null && ok "Node.js $(node -v)" || { err "Node.js not fou
 command -v npm  &>/dev/null && ok "npm $(npm -v)"       || { err "npm not found"; exit 1; }
 command -v git  &>/dev/null && ok "git"                 || { err "git not found"; exit 1; }
 
-SUPABASE_CLI=false; RAILWAY_CLI=false
-command -v supabase &>/dev/null && { ok "Supabase CLI"; SUPABASE_CLI=true; } \
-  || track_warn "Supabase CLI missing — brew install supabase/tap/supabase"
+RAILWAY_CLI=false
 command -v railway  &>/dev/null && { ok "Railway CLI";  RAILWAY_CLI=true;  } \
   || track_warn "Railway CLI missing  — npm i -g @railway/cli"
 
@@ -57,14 +55,12 @@ set -u
 step "3/11 · Validating environment variables"
 
 declare -A REQUIRED=(
-  ["NEXT_PUBLIC_SUPABASE_URL"]="Supabase → Settings → API → Project URL"
-  ["NEXT_PUBLIC_SUPABASE_ANON_KEY"]="Supabase → Settings → API → anon/public key"
-  ["SUPABASE_SERVICE_ROLE_KEY"]="Supabase → Settings → API → service_role key (secret!)"
+  ["DATABASE_URL"]="Railway → Postgres service → Connect → DATABASE_URL"
+  ["BETTER_AUTH_SECRET"]="Random secret — openssl rand -hex 32"
+  ["NEXT_PUBLIC_APP_URL"]="App URL (https://tightspothelper.com)"
   ["STRIPE_SECRET_KEY"]="Stripe → Developers → API keys → Secret key"
   ["STRIPE_WEBHOOK_SECRET"]="Stripe → Developers → Webhooks → Signing secret"
   ["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"]="Stripe → Developers → API keys → Publishable key"
-  ["DAILY_API_KEY"]="Daily.co → Developers → API keys"
-  ["DAILY_WEBHOOK_SECRET"]="Daily.co → Developers → Webhooks → Signing secret"
   ["R2_ACCOUNT_ID"]="Cloudflare → Account → Account ID"
   ["R2_ACCESS_KEY_ID"]="Cloudflare → R2 → Manage API Tokens → Access Key ID"
   ["R2_SECRET_ACCESS_KEY"]="Cloudflare → R2 → Manage API Tokens → Secret Access Key"
@@ -72,7 +68,11 @@ declare -A REQUIRED=(
   ["RESEND_API_KEY"]="Resend → API Keys → Create API Key"
   ["RESEND_FROM_EMAIL"]="Verified sender (e.g. noreply@tightspothelper.com)"
   ["CRON_SECRET"]="Random secret — openssl rand -hex 32"
-  ["NEXT_PUBLIC_APP_URL"]="App URL (https://tightspothelper.com)"
+  ["JITSI_DOMAIN"]="Your Jitsi server domain (e.g. meet.yourdomain.com)"
+  ["JITSI_JWT_SECRET"]="Jitsi JWT secret from your Jitsi server config"
+  ["JIBRI_API_URL"]="Jibri API base URL (e.g. https://jibri.yourdomain.com)"
+  ["JIBRI_API_TOKEN"]="Jibri API token"
+  ["JIBRI_WEBHOOK_SECRET"]="Jibri webhook signing secret"
 )
 
 MISSING=0
