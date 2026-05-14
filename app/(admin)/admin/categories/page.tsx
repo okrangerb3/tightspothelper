@@ -9,7 +9,13 @@ export default async function AdminCategories() {
   if (!session) redirect('/login')
   if ((session.user as any).role !== 'admin') redirect('/customer/dashboard')
 
-  const categories = await prisma.category.findMany({ orderBy: { sortOrder: 'asc' } })
+  const rawCats = await prisma.category.findMany({ orderBy: { sortOrder: 'asc' } })
+  const categories = rawCats.map(c => ({
+    ...c,
+    feeValue: Number(c.feeValue),
+    rateMin:  Number(c.rateMin),
+    rateMax:  Number(c.rateMax),
+  }))
 
   return (
     <div className="p-8 max-w-4xl">

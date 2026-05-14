@@ -58,7 +58,7 @@ export default async function AdminPros({ searchParams }: { searchParams: { filt
                       </span>
                     </div>
                     <p className="text-xs text-ink-500 mt-0.5">
-                      ${pro.hourlyRate ?? '—'}/hr · {pro.sessionCount ?? 0} sessions · ★ {pro.ratingAvg?.toFixed(1) ?? '—'}
+                      ${pro.hourlyRate?.toFixed(2) ?? '—'}/hr · {pro.sessionCount ?? 0} sessions · ★ {pro.ratingAvg?.toFixed(1) ?? '—'}
                     </p>
                     {pro.bio && <p className="text-xs text-ink-400 mt-1 line-clamp-1">{pro.bio}</p>}
                     {pro.certifications && (pro.certifications as string[]).length > 0 && (

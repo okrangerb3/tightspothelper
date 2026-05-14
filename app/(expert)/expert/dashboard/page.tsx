@@ -80,7 +80,7 @@ export default async function ExpertDashboard() {
           <StatCard label="Total sessions"   value={String(expert?.sessionCount ?? 0)} />
           <StatCard label="Total earned"     value={`$${totalEarned.toFixed(2)}`} accent />
           <StatCard label="Rating"           value={expert?.ratingAvg ? `${expert.ratingAvg.toFixed(1)}★` : '—'} sub={`${expert?.ratingCount ?? 0} reviews`} />
-          <StatCard label="Rate"             value={`$${expert?.hourlyRate ?? 0}/hr`} />
+          <StatCard label="Rate"             value={`$${Number(expert?.hourlyRate ?? 0)}/hr`} />
         </div>
 
         <h2 className="font-display text-base font-bold text-white mb-4">Recent sessions</h2>
