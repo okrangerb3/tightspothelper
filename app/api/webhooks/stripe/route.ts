@@ -34,17 +34,23 @@ export async function POST(req: NextRequest) {
         pro:       50 * 1024 ** 3,
         unlimited: -1,
       }
-      const { data: profile } = await admin
-        .from('profiles').select('id').eq('stripe_customer_id', sub.customer).single()
-      if (profile) {
-        await admin.from('storage_subscriptions').upsert({
-          user_id:                profile.id,
-          tier,
-          stripe_subscription_id: sub.id,
-          storage_limit_bytes:    limitMap[tier] ?? 10 * 1024 ** 3,
-          storage_used_bytes:     0,
-          started_at:             new Date(sub.start_date * 1000).toISOString(),
-        }, { onConflict: 'stripe_subscription_id' })
+      const user = await prisma.authUser.findFirst({
+        where: { stripeCustomerId: sub.customer as string },
+        select: { id: true },
+      })
+      if (user) {
+        await prisma.storageUsage.upsert({
+          where:  { stripeSubscriptionId: sub.id },
+          update: {},
+          create: {
+            userId:               user.id,
+            tier,
+            stripeSubscriptionId: sub.id,
+            limitBytes:           limitMap[tier] ?? 10 * 1024 ** 3,
+            usedBytes:            0,
+            startedAt:            new Date(sub.start_date * 1000),
+          },
+        })
       }
       break
     }
@@ -64,9 +70,10 @@ export async function POST(req: NextRequest) {
     case 'payment_intent.payment_failed': {
       const pi = event.data.object
       if (pi.metadata?.sessionId) {
-        await admin.from('sessions')
-          .update({ payment_status: 'failed' })
-          .eq('stripe_payment_intent_id', pi.id)
+        await prisma.session.updateMany({
+          where: { stripePaymentIntentId: pi.id },
+          data:  { paymentStatus: 'failed' },
+        })
       }
       break
     }
@@ -75,16 +82,19 @@ export async function POST(req: NextRequest) {
     case 'customer.subscription.updated': {
       const sub  = event.data.object
       const tier = sub.metadata?.tier ?? 'basic'
-      const { data: profile } = await admin
-        .from('profiles').select('id').eq('stripe_customer_id', sub.customer).single()
-      if (profile) {
-        await admin.from('storage_subscriptions').upsert({
-          user_id:               profile.id,
-          tier,
-          stripe_subscription_id: sub.id,
-          storage_limit_bytes:   tier === 'unlimited' ? -1 : tier === 'pro' ? 50 * 1024 ** 3 : 10 * 1024 ** 3,
-          cancelled_at:          sub.cancel_at ? new Date(sub.cancel_at * 1000).toISOString() : null,
-        }, { onConflict: 'stripe_subscription_id' })
+      const user = await prisma.authUser.findFirst({
+        where: { stripeCustomerId: sub.customer as string },
+        select: { id: true },
+      })
+      if (user) {
+        await prisma.storageUsage.updateMany({
+          where: { stripeSubscriptionId: sub.id },
+          data: {
+            tier,
+            limitBytes: tier === 'unlimited' ? -1 : tier === 'pro' ? 50 * 1024 ** 3 : 10 * 1024 ** 3,
+            cancelledAt: sub.cancel_at ? new Date(sub.cancel_at * 1000) : null,
+          },
+        })
       }
       break
     }
@@ -92,9 +102,10 @@ export async function POST(req: NextRequest) {
     // ── Storage subscription cancelled ───────────────────────
     case 'customer.subscription.deleted': {
       const sub = event.data.object
-      await admin.from('storage_subscriptions')
-        .update({ cancelled_at: new Date().toISOString() })
-        .eq('stripe_subscription_id', sub.id)
+      await prisma.storageUsage.updateMany({
+        where: { stripeSubscriptionId: sub.id },
+        data:  { cancelledAt: new Date() },
+      })
       break
     }
 
@@ -102,9 +113,10 @@ export async function POST(req: NextRequest) {
     case 'account.updated': {
       const account = event.data.object
       if (account.details_submitted && account.charges_enabled) {
-        await admin.from('expert_profiles')
-          .update({ stripe_connect_onboarded: true })
-          .eq('stripe_connect_id', account.id)
+        await prisma.expertProfile.updateMany({
+          where: { stripeConnectId: account.id },
+          data:  { stripeConnectOnboarded: true },
+        })
       }
       break
     }
