@@ -36,7 +36,7 @@ export default async function ExpertEarningsPage() {
         <div className="card p-5 mb-6 border-yellow-500/30 bg-yellow-500/5">
           <p className="text-sm font-medium text-yellow-300 mb-1">Payout account not connected</p>
           <p className="text-xs text-ink-400 mb-3">Connect your bank account via Stripe to receive payouts</p>
-          <a href="/expert/apply/connect" className="btn-primary text-sm py-2">Connect payout account</a>
+          <a href="/apply/connect" className="btn-primary text-sm py-2">Connect payout account</a>
         </div>
       )}
 

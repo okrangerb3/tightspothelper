@@ -118,8 +118,8 @@ export function verifyStripeWebhook(payload: string | Buffer, signature: string)
 export async function createConnectOnboardingLink(accountId: string) {
   return stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/expert/apply/connect/refresh`,
-    return_url:  `${process.env.NEXT_PUBLIC_APP_URL}/expert/apply/connect/complete`,
+    refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/apply/connect/refresh`,
+    return_url:  `${process.env.NEXT_PUBLIC_APP_URL}/apply/connect/complete`,
     type: 'account_onboarding',
   })
 }

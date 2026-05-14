@@ -31,8 +31,11 @@ function LoginPageContent() {
       const role = (data?.user as any)?.role ?? 'customer'
       router.push(redirectTo ?? `/${role}/dashboard`)
       router.refresh()
-    } catch {
-      setError('Unable to sign in right now. Please check your connection and try again.')
+    } catch (caughtError) {
+      const message = caughtError instanceof Error
+        ? caughtError.message
+        : 'Unable to sign in right now. Please check your connection and try again.'
+      setError(message)
     } finally {
       setLoading(false)
     }

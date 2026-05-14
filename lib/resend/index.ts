@@ -50,7 +50,7 @@ export async function sendApplicationResult(to: string, params: {
     html: params.approved
       ? `<h2>You're approved, ${params.name}!</h2>
          <p>Your expert application has been approved. Connect your payout account to start taking sessions.</p>
-         <p><a href="${APP}/expert/apply/connect" style="background:#f97c0a;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:600">Connect payout account</a></p>`
+        <p><a href="${APP}/apply/connect" style="background:#f97c0a;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;display:inline-block;font-weight:600">Connect payout account</a></p>`
       : `<h2>Application update, ${params.name}</h2>
          <p>Unfortunately we weren't able to approve your application at this time.</p>
          ${params.reason ? `<p><strong>Reason:</strong> ${params.reason}</p>` : ''}

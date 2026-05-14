@@ -58,7 +58,7 @@ export default function ExpertApplyPage() {
       setLoading(false)
       return
     }
-    router.push('/expert/apply/connect')
+    router.push('/apply/connect')
   }
 
   return (

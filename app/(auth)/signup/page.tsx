@@ -50,34 +50,52 @@ function SignupPageContent() {
     setLoading(true)
     setError(null)
 
-    const { error: authError } = await signUp.email({
-      email,
-      password,
-      name,
-      // additional fields for better-auth
-      fetchOptions: { body: JSON.stringify({ role }) },
-    } as any)
+    try {
+      const { error: authError } = await signUp.email({
+        email,
+        password,
+        name,
+        role,
+      } as any)
 
-    if (authError) { setError(authError.message ?? null); setLoading(false); return }
+      if (authError) {
+        setError(authError.message ?? 'Unable to create account. Please try again.')
+        return
+      }
 
-    // After signup, update the role (better-auth sets default 'customer')
-    // We pass role as an additional field — if better-auth doesn't pick it up from
-    // the initial signup, update it immediately via our API
-    await fetch('/api/auth/update-role', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ role }),
-    })
+      // Keep role sync as a best-effort fallback in case provider-side mapping changes.
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 5000)
+      try {
+        await fetch('/api/auth/update-role', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role }),
+          signal: controller.signal,
+        })
+      } catch {
+        // Non-blocking fallback only.
+      } finally {
+        clearTimeout(timeout)
+      }
 
-    router.push(role === 'expert' ? '/expert/apply' : '/customer/dashboard')
-    router.refresh()
+      router.push(role === 'expert' ? '/apply' : '/customer/dashboard')
+      router.refresh()
+    } catch (caughtError) {
+      const message = caughtError instanceof Error
+        ? caughtError.message
+        : 'Unable to create account right now. Please try again.'
+      setError(message)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleOAuth = async (provider: 'google' | 'apple') => {
     if (!role) return
     await signIn.social({
       provider,
-      callbackURL: role === 'expert' ? '/expert/apply' : '/customer/dashboard',
+      callbackURL: role === 'expert' ? '/apply' : '/customer/dashboard',
     })
   }
 
