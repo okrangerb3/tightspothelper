@@ -22,7 +22,11 @@ function LoginPageContent() {
     setError(null)
 
     try {
-      const { error: authError, data } = await signIn.email({ email, password })
+      const { error: authError, data } = await signIn.email({
+        email,
+        password,
+        rememberMe: false,
+      })
       if (authError) {
         console.error('[Login] Auth error:', authError)
         const message =

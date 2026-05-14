@@ -14,7 +14,7 @@ export default async function ConnectRefreshPage() {
     select: { stripeConnectId: true },
   })
 
-  if (!expert?.stripeConnectId) redirect('/expert/apply/connect')
+  if (!expert?.stripeConnectId) redirect('/apply/connect')
 
   const { url } = await createConnectOnboardingLink(expert.stripeConnectId!)
   redirect(url)

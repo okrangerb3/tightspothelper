@@ -13,8 +13,8 @@ export default function SessionRoom({ session, userId, isExpert }: {
 }) {
   const router = useRouter()
   const [tab, setTab]     = useState<Tab>('photos')
-  const [notes, setNotes] = useState(session.notes ?? '')
-  const [parts, setParts] = useState<string[]>(session.parts_needed ?? [])
+  const [notes, setNotes] = useState(session.expertNotes ?? session.customerNotes ?? '')
+  const [parts, setParts] = useState<string[]>(Array.isArray(session.partsNeeded) ? session.partsNeeded : [])
   const [newPart, setNewPart] = useState('')
   const [ended, setEnded] = useState(false)
 
@@ -61,7 +61,7 @@ export default function SessionRoom({ session, userId, isExpert }: {
         <div className="flex items-center gap-3">
           <div className="flex-1">
             <p className="text-xs text-ink-500">{(session.category as any)?.name}</p>
-            <h1 className="text-sm font-medium text-ink-200 truncate">{session.problem_title}</h1>
+            <h1 className="text-sm font-medium text-ink-200 truncate">{session.problemTitle}</h1>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />

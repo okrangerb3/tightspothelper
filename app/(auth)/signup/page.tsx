@@ -55,28 +55,11 @@ function SignupPageContent() {
         email,
         password,
         name,
-        role,
-      } as any)
+      })
 
       if (authError) {
         setError(authError.message ?? 'Unable to create account. Please try again.')
         return
-      }
-
-      // Keep role sync as a best-effort fallback in case provider-side mapping changes.
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 5000)
-      try {
-        await fetch('/api/auth/update-role', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role }),
-          signal: controller.signal,
-        })
-      } catch {
-        // Non-blocking fallback only.
-      } finally {
-        clearTimeout(timeout)
       }
 
       router.push(role === 'expert' ? '/apply' : '/customer/dashboard')

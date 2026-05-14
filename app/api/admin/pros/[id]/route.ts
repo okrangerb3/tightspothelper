@@ -20,6 +20,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     },
   })
 
+  await prisma.authUser.update({
+    where: { id: params.id },
+    data: {
+      role: status === 'approved' ? 'expert' : 'customer',
+    },
+  })
+
   const [expertProfile, expertUser] = await Promise.all([
     prisma.expertProfile.findUnique({ where: { id: params.id }, select: { checkrCandidateId: true } }),
     prisma.authUser.findUnique({ where: { id: params.id }, select: { name: true, email: true } }),

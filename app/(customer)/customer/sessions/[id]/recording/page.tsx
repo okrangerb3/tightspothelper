@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
 interface RecordingData {
-  url: string; expiresAt: string | null; plan: string
+  url: string
+  expiresAt: string | null
+  purchaseStatus: 'free_window' | 'purchased' | 'expired' | 'deleted'
 }
 
 export default function RecordingPage({ params }: { params: { id: string } }) {
@@ -29,11 +31,20 @@ export default function RecordingPage({ params }: { params: { id: string } }) {
       .catch(() => { setError('Failed to load recording'); setLoading(false) })
   }, [params.id])
 
+  useEffect(() => {
+    if (!loading && autoKeep && recording?.purchaseStatus === 'free_window' && !purchasing && !purchased && !error) {
+      void handleKeep()
+    }
+  }, [loading, autoKeep, recording?.purchaseStatus, purchasing, purchased, error])
+
   const handleKeep = async () => {
     setPurchasing(true)
     const res  = await fetch(`/api/recordings/${params.id}/purchase`, { method: 'POST' })
     const data = await res.json()
-    if (data.ok) { setPurchased(true); setRecording(r => r ? { ...r, plan: 'per_session', expiresAt: null } : r) }
+    if (data.ok) {
+      setPurchased(true)
+      setRecording(r => r ? { ...r, purchaseStatus: 'purchased', expiresAt: null } : r)
+    }
     setPurchasing(false)
   }
 
@@ -75,7 +86,7 @@ export default function RecordingPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Expiry / keep CTA */}
-      {recording?.plan === 'free' && !purchased && (
+      {recording?.purchaseStatus === 'free_window' && !purchased && (
         <div className={`card p-5 mb-4 ${daysLeft !== null && daysLeft <= 5 ? 'border-yellow-500/30 bg-yellow-500/5' : ''}`}>
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
@@ -95,7 +106,7 @@ export default function RecordingPage({ params }: { params: { id: string } }) {
         </div>
       )}
 
-      {(recording?.plan !== 'free' || purchased) && (
+      {(recording?.purchaseStatus !== 'free_window' || purchased) && (
         <div className="card p-4 flex items-center gap-3">
           <span className="text-green-400">✓</span>
           <p className="text-sm text-ink-200">This recording is saved permanently to your account</p>
@@ -103,7 +114,7 @@ export default function RecordingPage({ params }: { params: { id: string } }) {
       )}
 
       {/* Download link (only for paid) */}
-      {recording?.plan !== 'free' && recording?.url && (
+      {recording?.purchaseStatus === 'purchased' && recording?.url && (
         <div className="mt-3">
           <a href={recording.url} download className="btn-ghost text-sm">
             Download recording

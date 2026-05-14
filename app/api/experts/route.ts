@@ -9,6 +9,8 @@ export async function GET(req: Request) {
     where: {
       status:    'approved',
       available: true,
+      stripeConnectId: { not: null },
+      stripeConnectOnboarded: true,
       ...(categoryId ? { categoryIds: { has: categoryId } } : {}),
     },
     include: { user: { select: { name: true } } },

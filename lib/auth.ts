@@ -9,20 +9,49 @@ if (!process.env.DATABASE_URL) {
 }
 
 const isProd = process.env.NODE_ENV === 'production'
+const canonicalAppUrl =
+  process.env.BETTER_AUTH_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  'https://tightspothelper.com'
+
+const authBaseURL = isProd
+  ? {
+      allowedHosts: [
+        'tightspothelper.com',
+        'www.tightspothelper.com',
+        '*.vercel.app',
+        '*.railway.app',
+      ],
+      protocol: 'https' as const,
+      fallback: canonicalAppUrl,
+    }
+  : {
+      allowedHosts: ['localhost:*', '127.0.0.1:*'],
+      protocol: 'http' as const,
+      fallback: 'http://localhost:3000',
+    }
 
 const authSecret =
   process.env.BETTER_AUTH_SECRET ||
   (isProd ? undefined : 'tightspothelper-local-dev-secret-change-before-prod')
 
-const authBaseUrl =
-  process.env.BETTER_AUTH_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  'http://localhost:3000'
-
 export const auth = betterAuth({
   secret: authSecret,
-  baseURL: authBaseUrl,
+  baseURL: authBaseURL,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
+
+  session: {
+    expiresIn: 60 * 60 * 12,
+    updateAge: 60 * 60,
+    freshAge: 60 * 15,
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5,
+      refreshCache: {
+        updateAge: 60,
+      },
+    },
+  },
 
   // Map to our custom table names to avoid conflict with app Session model
   user: {
@@ -69,12 +98,4 @@ export const auth = betterAuth({
       })
     },
   },
-
-  trustedOrigins: [
-    authBaseUrl,
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-    'https://tightspothelper.com',
-    'https://www.tightspothelper.com',
-  ],
 })

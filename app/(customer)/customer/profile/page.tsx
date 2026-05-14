@@ -17,16 +17,19 @@ export default function CustomerProfilePage() {
 
   useEffect(() => {
     const load = async () => {
-      const s = await authClient.getSession()
-      if (!s.data?.user) { router.push('/login'); return }
-      setEmail(s.data.user.email ?? '')
+      try {
+        const s = await authClient.getSession()
+        if (!s.data?.user) { router.push('/login'); return }
+        setEmail(s.data.user.email ?? '')
 
-      const res = await fetch('/api/customer/profile')
-      if (res.ok) {
-        const { user } = await res.json()
-        setForm({ name: user.name ?? '', phone: user.phone ?? '' })
+        const res = await fetch('/api/customer/profile')
+        if (res.ok) {
+          const { user } = await res.json()
+          setForm({ name: user.name ?? '', phone: user.phone ?? '' })
+        }
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
     load()
   }, [])

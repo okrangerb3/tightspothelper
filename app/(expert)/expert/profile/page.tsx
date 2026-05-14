@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { authClient } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 
 export default function ExpertProfilePage() {
@@ -14,17 +13,20 @@ export default function ExpertProfilePage() {
 
   useEffect(() => {
     const load = async () => {
-      const res = await fetch('/api/expert/profile')
-      if (!res.ok) return
-      const data = await res.json()
-      if (data) setForm({
-        bio:            data.bio ?? '',
-        years:          String(data.yearsExperience ?? ''),
-        certifications: (data.certifications ?? []).join(', '),
-        hourlyRate:     data.hourlyRate ?? 75,
-        available:      data.available ?? true,
-      })
-      setLoading(false)
+      try {
+        const res = await fetch('/api/expert/profile')
+        if (!res.ok) return
+        const data = await res.json()
+        if (data) setForm({
+          bio:            data.bio ?? '',
+          years:          String(data.yearsExperience ?? ''),
+          certifications: (data.certifications ?? []).join(', '),
+          hourlyRate:     data.hourlyRate ?? 75,
+          available:      data.available ?? true,
+        })
+      } finally {
+        setLoading(false)
+      }
     }
     load()
   }, [])
