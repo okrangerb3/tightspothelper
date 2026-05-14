@@ -25,7 +25,7 @@ export default function SessionRoom({ session, userId, isExpert, token }: {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ durationSeconds, notes, parts_needed: parts }),
     })
-    router.push(isExpert ? `/expert/sessions/${session.id}` : `/customer/sessions/${session.id}/summary`)
+    router.push(isExpert ? `/expert/sessions/${session.id}/summary` : `/customer/sessions/${session.id}/summary`)
   }
 
   const saveNotes = async () => {
