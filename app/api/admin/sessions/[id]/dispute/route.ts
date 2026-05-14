@@ -8,7 +8,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { status, resolution } = await req.json()
 
-  await prisma.dispute.update({
+  await prisma.dispute.updateMany({
     where: { sessionId: params.id },
     data: {
       status,
