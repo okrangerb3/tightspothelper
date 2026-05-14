@@ -9,11 +9,12 @@ export default async function AdminFeeOverridesPage() {
   if (!session) redirect('/login')
   if (session.user.role !== 'admin') redirect('/customer/dashboard')
 
-  const categories = await prisma.category.findMany({
+  const rawCats = await prisma.category.findMany({
     where: { active: true },
     select: { id: true, name: true, feeType: true, feeValue: true },
     orderBy: { name: 'asc' },
   })
+  const categories = rawCats.map(c => ({ ...c, feeValue: Number(c.feeValue) }))
 
   const overrides = await prisma.feeOverride.findMany({
     where: { endsAt: { gte: new Date() } },
