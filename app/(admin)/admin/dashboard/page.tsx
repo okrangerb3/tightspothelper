@@ -143,7 +143,7 @@ export default async function AdminDashboard() {
                       <p className="text-[10px] text-ink-400 font-mono truncate">{r.sessionId}</p>
                       <p className="text-[10px] text-red-400 mt-0.5">
                         Expires {r.expiresAt ? new Date(r.expiresAt).toLocaleDateString() : '—'}
-                        {' · '}{((r.sizeBytes ?? 0) / 1024 / 1024).toFixed(0)} MB
+                        {' · '}{(Number(r.fileSizeBytes ?? 0) / 1024 / 1024).toFixed(0)} MB
                       </p>
                     </div>
                   ))}

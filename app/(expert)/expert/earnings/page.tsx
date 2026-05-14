@@ -57,7 +57,7 @@ export default async function ExpertEarningsPage() {
                 <p className="text-sm text-ink-200">{s.category?.name ?? 'Session'}</p>
                 <p className="text-xs text-ink-500 mt-0.5">
                   {new Date(s.createdAt).toLocaleDateString()}
-                  {s.durationBilledMins ? ` · ${s.durationBilledMins} min` : ''}
+                  {s.durationBilledMinutes ? ` · ${s.durationBilledMinutes} min` : ''}
                 </p>
               </div>
               <span className="text-sm font-medium text-green-400">

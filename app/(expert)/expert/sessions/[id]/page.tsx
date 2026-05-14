@@ -2,7 +2,7 @@ import { redirect, notFound } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { prisma } from '@/lib/db'
-import SessionRoom from '@/app/(customer)/sessions/[id]/SessionRoom'
+import SessionRoom from '@/app/(customer)/customer/sessions/[id]/SessionRoom'
 
 export default async function ExpertSessionPage({ params }: { params: { id: string } }) {
   const authSession = await auth.api.getSession({ headers: headers() })

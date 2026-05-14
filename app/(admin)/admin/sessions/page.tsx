@@ -49,7 +49,7 @@ export default async function AdminSessionsPage({ searchParams }: { searchParams
               <p className="text-xs text-ink-500 mt-0.5">
                 {s.customer?.name ?? '—'} → {s.expert?.name ?? 'Unassigned'}
                 {' · '}{s.category?.name}
-                {s.durationBilledMins ? ` · ${s.durationBilledMins}m` : ''}
+                {s.durationBilledMinutes ? ` · ${s.durationBilledMinutes}m` : ''}
                 {' · '}{new Date(s.createdAt).toLocaleDateString()}
               </p>
             </div>

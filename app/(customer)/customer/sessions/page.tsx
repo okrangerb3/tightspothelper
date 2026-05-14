@@ -45,7 +45,7 @@ export default async function CustomerSessionsPage() {
         <div className="space-y-3">
           {sessions.map(s => {
             const rec       = recMap[s.id]
-            const hasRec    = rec && !rec.deletedAt
+            const hasRec    = rec && rec.purchaseStatus !== 'deleted'
             const recExpiry = rec?.expiresAt ? new Date(rec.expiresAt) : null
             const daysLeft  = recExpiry ? Math.ceil((recExpiry.getTime() - Date.now()) / 86400000) : null
 
@@ -63,10 +63,10 @@ export default async function CustomerSessionsPage() {
                   <p className="text-xs text-ink-500">
                     {s.category?.name}
                     {s.expert?.user?.name ? ` · ${s.expert.user.name}` : ''}
-                    {s.durationBilledMins ? ` · ${s.durationBilledMins} min` : ''}
+                    {s.durationBilledMinutes ? ` · ${s.durationBilledMinutes} min` : ''}
                     {' · '}{new Date(s.createdAt).toLocaleDateString()}
                   </p>
-                  {hasRec && daysLeft !== null && daysLeft <= 7 && rec.plan === 'free' && (
+                  {hasRec && daysLeft !== null && daysLeft <= 7 && rec.purchaseStatus === 'free_window' && (
                     <p className="text-xs text-yellow-400 mt-1">
                       Recording expires in {daysLeft} day{daysLeft !== 1 ? 's' : ''} —{' '}
                       <span className="underline">keep it</span>

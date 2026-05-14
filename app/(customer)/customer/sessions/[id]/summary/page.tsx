@@ -17,7 +17,7 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
       expert: { select: { ratingAvg: true, user: { select: { name: true } } } },
       customer: { select: { user: { select: { name: true } } } },
       photos: { select: { id: true, stage: true, storagePath: true } },
-      recordings: { select: { id: true, plan: true, expiresAt: true, deletedAt: true, durationSeconds: true }, take: 1 },
+      recordings: { select: { id: true, purchaseStatus: true, expiresAt: true, durationSeconds: true }, take: 1 },
     },
   })
 
@@ -32,7 +32,7 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
     select: { rating: true, comment: true },
   })
 
-  const hasRec   = recording && !recording.deletedAt
+  const hasRec   = recording && recording.purchaseStatus !== 'deleted'
   const daysLeft = recording?.expiresAt
     ? Math.ceil((new Date(recording.expiresAt).getTime() - Date.now()) / 86400000) : null
 
@@ -54,7 +54,7 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
         <h1 className="font-display text-2xl font-bold text-white">{dbSession.problemTitle}</h1>
         <p className="text-ink-400 text-sm mt-1">
           With {dbSession.expert?.user?.name} · {new Date(dbSession.createdAt).toLocaleDateString()}
-          {dbSession.durationBilledMins ? ` · ${dbSession.durationBilledMins} min` : ''}
+          {dbSession.durationBilledMinutes ? ` · ${dbSession.durationBilledMinutes} min` : ''}
         </p>
       </div>
 
@@ -65,7 +65,7 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
             <div>
               <p className="text-sm font-medium text-white">Session recording ready</p>
               <p className="text-xs text-ink-500 mt-0.5">
-                {recording.plan === 'free' && daysLeft !== null
+                {recording.purchaseStatus === 'free_window' && daysLeft !== null
                   ? `Free access — expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`
                   : 'Saved permanently'}
               </p>

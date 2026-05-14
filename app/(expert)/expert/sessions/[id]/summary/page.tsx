@@ -52,7 +52,7 @@ export default async function ExpertSessionSummaryPage({ params }: { params: { i
         <h1 className="font-display text-2xl font-bold text-white">{session.problemTitle}</h1>
         <p className="text-ink-400 text-sm mt-1">
           With {session.customer?.name} · {new Date(session.createdAt).toLocaleDateString()}
-          {session.durationBilledMins ? ` · ${session.durationBilledMins} min` : ''}
+          {session.durationBilledMinutes ? ` · ${session.durationBilledMinutes} min` : ''}
         </p>
       </div>
 

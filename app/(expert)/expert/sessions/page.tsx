@@ -46,7 +46,7 @@ export default async function ExpertSessionsPage() {
                 <p className="text-xs text-ink-500 mt-0.5">
                   {s.customer?.name ?? '—'}
                   {' · '}{s.category?.name}
-                  {s.durationBilledMins ? ` · ${s.durationBilledMins} min` : ''}
+                  {s.durationBilledMinutes ? ` · ${s.durationBilledMinutes} min` : ''}
                   {' · '}{new Date(s.createdAt).toLocaleDateString()}
                 </p>
               </div>

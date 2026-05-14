@@ -84,23 +84,3 @@ export default async function AdminPros({ searchParams }: { searchParams: { filt
     </div>
   )
 }
-
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <ProActions
-                    proId={pro.id}
-                    status={pro.status}
-                    stripeConnectOnboarded={pro.stripe_connect_onboarded}
-                    checkrCandidateId={pro.checkr_candidate_id}
-                    backgroundCheckPassed={pro.background_check_passed}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-    </div>
-  )
-}
