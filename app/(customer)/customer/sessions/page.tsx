@@ -75,7 +75,7 @@ export default async function CustomerSessionsPage() {
                 </div>
                 <div className="flex items-center gap-4 shrink-0">
                   {s.customerTotal && (
-                    <span className="text-sm font-medium text-ink-300">${(s.customerTotal as number).toFixed(2)}</span>
+                    <span className="text-sm font-medium text-ink-300">${s.customerTotal?.toFixed(2)}</span>
                   )}
                   {hasRec && (
                     <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-full">
