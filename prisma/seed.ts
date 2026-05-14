@@ -95,9 +95,11 @@ async function main() {
     },
   ]
 
+  const categoryIds: Record<string, string> = {}
+
   for (let i = 0; i < categories.length; i++) {
     const cat = categories[i]
-    await prisma.category.upsert({
+    const savedCategory = await prisma.category.upsert({
       where: { slug: cat.slug },
       update: {},
       create: {
@@ -113,6 +115,7 @@ async function main() {
         feeFlatTiers: cat.feeFlatTiers ?? undefined,
       },
     })
+    categoryIds[cat.slug] = savedCategory.id
     console.log(`  ✓ ${cat.name}`)
   }
 
@@ -153,6 +156,7 @@ async function main() {
       yearsExperience: 12,
       certifications: ['Master Plumber License CA-MP-44821'],
       hourlyRate: 120,
+      categoryIds: [categoryIds.plumbing].filter(Boolean),
       available: true,
       stripeConnectOnboarded: false,
       backgroundCheckPassed: true,
