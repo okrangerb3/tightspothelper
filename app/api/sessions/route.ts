@@ -24,10 +24,12 @@ export async function POST(req: NextRequest) {
 
   const { expertId, categoryId, durationMinutes, problemTitle, problemDescription, scheduledAt } = parsed.data
 
-  // Fetch category + expert in parallel
-  const [category, expert] = await Promise.all([
+  // Fetch category + expert profile + expert user record in parallel.
+  // We need the expert's user row separately to get their email/name for the notification.
+  const [category, expert, expertUser] = await Promise.all([
     prisma.category.findUnique({ where: { id: categoryId } }),
     prisma.expertProfile.findUnique({ where: { id: expertId } }),
+    prisma.authUser.findUnique({ where: { id: expertId }, select: { email: true, name: true } }),
   ])
 
   if (!category) return NextResponse.json({ error: 'Category not found' }, { status: 404 })
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // Ensure Stripe customer exists
+  // Ensure Stripe customer exists for the booking customer
   const customerUser = await prisma.authUser.findUnique({ where: { id: auth.user.id } })
   let stripeCustomerId = customerUser?.stripeCustomerId
 
@@ -140,16 +142,37 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  // Send notifications in background (non-blocking)
+  // ── Send notifications in background (non-blocking) ──────────────────
+  //
+  // Both customer and expert get an email. Previously the expert email was
+  // not being sent, and the customer's confirmation used the customer's own
+  // name as the expert name (because we only had `auth.user.name` in scope).
+  const customerEmail = auth.user.email
+  const customerName  = auth.user.name ?? 'there'
+  const expertName    = expertUser?.name ?? 'your expert'
+  const expertEmail   = expertUser?.email ?? null
+  const scheduledIso  = scheduledAt ?? newSession.scheduledAt?.toISOString() ?? new Date().toISOString()
+
   Promise.all([
-    sendSessionConfirmation(auth.user.email, {
-      customerName: auth.user.name ?? 'there',
-      expertName:   auth.user.name ?? 'your expert',
+    sendSessionConfirmation(customerEmail, {
+      customerName,
+      expertName,
       categoryName: category.name,
       sessionId:    newSession.id,
-      scheduledAt:  (scheduledAt ?? new Date().toISOString()),
+      scheduledAt:  scheduledIso,
       totalAmount:  pricing.customerTotal,
     }),
+    expertEmail
+      ? sendExpertNewBooking(expertEmail, {
+          expertName,
+          customerName,
+          categoryName: category.name,
+          sessionId:    newSession.id,
+          problemTitle,
+          scheduledAt:  scheduledIso,
+          payout:       pricing.expertPayout,
+        })
+      : Promise.resolve(null),
   ]).catch(e => console.error('Session notification emails failed:', e))
 
   return NextResponse.json({ session: newSession, pricing })
