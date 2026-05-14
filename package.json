@@ -6,9 +6,8 @@
     "node": ">=20.19.0"
   },
   "scripts": {
-    "postinstall": "npx prisma generate",
     "dev": "tsx server.ts",
-    "build": "next build",
+    "build": "npx prisma generate && next build",
     "start": "tsx server.ts",
     "lint": "next lint",
     "db:generate": "npx prisma generate",

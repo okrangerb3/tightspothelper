@@ -4,21 +4,27 @@ import Link from 'next/link'
 export function LogoMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-      {/* Rounded square background */}
       <rect width="32" height="32" rx="8" fill="#f97c0a" />
-      {/* Wrench icon (white) */}
+
+      {/* House outline */}
       <path
-        d="M22.5 8.5a4.5 4.5 0 0 0-4.37 5.57L11 21.2a1.5 1.5 0 1 0 2.12 2.12l7.13-7.13A4.5 4.5 0 0 0 22.5 8.5Zm0 2a2.5 2.5 0 0 1 .63.08l-1.8 1.8a1 1 0 0 0 0 1.41l.88.88a1 1 0 0 0 1.41 0l1.8-1.8c.05.2.08.41.08.63a2.5 2.5 0 0 1-2.5 2.5 2.5 2.5 0 0 1-.63-.08l.05-.05a1 1 0 0 0-.05-1.36l-.88-.88a1 1 0 0 0-1.41 0l-.05.05A2.5 2.5 0 0 1 20 13a2.5 2.5 0 0 1 2.5-2.5Z"
-        fill="white"
-      />
-      {/* House outline (white) */}
-      <path
-        d="M7 16.5 12 12l5 4.5V24H9v-4.5H7Z"
+        d="M6.75 15.25 16 7.75l9.25 7.5V24a1.25 1.25 0 0 1-1.25 1.25H8A1.25 1.25 0 0 1 6.75 24v-8.75Z"
         stroke="white"
-        strokeWidth="1.5"
+        strokeWidth="2"
         strokeLinejoin="round"
-        fill="none"
       />
+
+      {/* Wrench */}
+      <path
+        d="M20.6 10.9a3.2 3.2 0 0 0-3.73 4.12l-4.68 4.68a1.35 1.35 0 1 0 1.9 1.91l4.69-4.69a3.2 3.2 0 0 0 4.12-3.73l-1.59 1.59a.85.85 0 0 1-1.2 0l-.9-.9a.85.85 0 0 1 0-1.2l1.39-1.38Z"
+        stroke="white"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      {/* Door */}
+      <rect x="14.3" y="18.6" width="3.4" height="6.65" rx="1" fill="white" />
     </svg>
   )
 }
