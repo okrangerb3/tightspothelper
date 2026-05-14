@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
+import ReviewForm from './ReviewForm'
 
 export default async function SessionSummaryPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -128,41 +129,19 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
 
       {/* Leave a review */}
       {session.status === 'completed' && !review && (
-        <ReviewForm sessionId={params.id} expertId={session.expert_id} />
+        <ReviewForm sessionId={params.id} revieweeId={session.expert_id} />
       )}
       {review && (
         <div className="card p-5">
           <h2 className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-2">Your review</h2>
           <div className="flex gap-1 mb-2">
             {[1,2,3,4,5].map(n => (
-              <span key={n} className={n <= review.rating ? 'text-brand-400' : 'text-ink-700'}>★</span>
+              <span key={n} className={`text-xl ${n <= review.rating ? 'text-brand-400' : 'text-ink-700'}`}>★</span>
             ))}
           </div>
           {review.comment && <p className="text-sm text-ink-300">{review.comment}</p>}
         </div>
       )}
-    </div>
-  )
-}
-
-function ReviewForm({ sessionId, expertId }: { sessionId: string; expertId: string }) {
-  return (
-    <div className="card p-5" id="review">
-      <h2 className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-3">Leave a review</h2>
-      <form action={`/api/sessions/${sessionId}/review`} method="POST" className="space-y-3">
-        <input type="hidden" name="expertId" value={expertId} />
-        <div className="flex gap-2">
-          {[1,2,3,4,5].map(n => (
-            <label key={n} className="cursor-pointer">
-              <input type="radio" name="rating" value={n} className="sr-only" />
-              <span className="text-2xl text-ink-700 hover:text-brand-400 transition-colors">★</span>
-            </label>
-          ))}
-        </div>
-        <textarea name="comment" placeholder="How did it go? (optional)"
-          className="input min-h-[80px] resize-none text-sm" />
-        <button type="submit" className="btn-primary w-full">Submit review</button>
-      </form>
     </div>
   )
 }

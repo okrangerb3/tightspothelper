@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation'
 
 export default function DisputeControls({ session, dispute }: { session: any; dispute: any }) {
   const router = useRouter()
-  const [loading, setLoading]   = useState(false)
-  const [reason, setReason]     = useState('')
+  const [loading, setLoading]     = useState(false)
+  const [reason, setReason]       = useState('')
   const [refundAmt, setRefundAmt] = useState('')
-  const [open, setOpen]         = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [open, setOpen]           = useState(false)
 
   const issueRefund = async (full: boolean) => {
     setLoading(true)
@@ -29,6 +30,50 @@ export default function DisputeControls({ session, dispute }: { session: any; di
       body: JSON.stringify({ status: 'resolved', resolution: reason }),
     })
     setLoading(false); router.refresh()
+  }
+
+  const cancelSession = async () => {
+    setLoading(true)
+    await fetch(`/api/admin/sessions/${session.id}/cancel`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: cancelReason || 'Cancelled by admin' }),
+    })
+    setLoading(false); router.refresh()
+  }
+
+  // Pending / active sessions — show cancel control
+  if (session.status === 'pending' || session.status === 'active') {
+    return (
+      <div className="card p-5">
+        <p className="text-xs text-ink-500 uppercase tracking-wide mb-3">Admin actions</p>
+        {!open ? (
+          <button onClick={() => setOpen(true)}
+            className="text-sm px-4 py-2.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors w-full">
+            Cancel session
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <textarea
+              className="input text-xs min-h-[60px] resize-none"
+              placeholder="Cancellation reason (internal)…"
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+            />
+            <div className="flex gap-2">
+              <button onClick={cancelSession} disabled={loading}
+                className="flex-1 text-sm px-4 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50">
+                {loading ? '…' : `Confirm cancel${session.payment_status === 'held' ? ' + refund' : ''}`}
+              </button>
+              <button onClick={() => { setOpen(false); setCancelReason('') }}
+                className="text-sm px-4 py-2 rounded-lg bg-ink-800 text-ink-400 border border-ink-700 hover:bg-ink-700 transition-colors">
+                Back
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
   }
 
   if (session.status === 'completed' || session.status === 'disputed') {
