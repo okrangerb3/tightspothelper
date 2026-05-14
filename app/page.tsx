@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { Logo } from '@/components/ui/Logo'
 
 const CATEGORIES = [
   { icon: '🔧', name: 'Plumbing',   desc: 'Leaks, drains, fixtures' },
@@ -19,7 +20,10 @@ const STEPS = [
 ]
 
 export default async function LandingPage() {
-  const session = await auth.api.getSession({ headers: headers() })
+  let session = null
+  try {
+    session = await auth.api.getSession({ headers: headers() })
+  } catch (_) {}
   if (session?.user) {
     const role = (session.user as any).role ?? 'customer'
     redirect(`/${role}/dashboard`)
@@ -29,9 +33,7 @@ export default async function LandingPage() {
     <div className="min-h-screen">
       {/* ── Nav ─────────────────────────────────────────── */}
       <nav className="container-page flex items-center justify-between py-5">
-        <span className="font-display text-xl font-bold text-white tracking-tight">
-          TightSpot<span className="text-brand-500">Helper</span>
-        </span>
+        <Logo />
         <div className="flex items-center gap-3">
           <Link href="/login"  className="btn-ghost text-sm py-2 px-4">Sign in</Link>
           <Link href="/signup" className="btn-primary text-sm py-2 px-4">Get help now</Link>
@@ -129,7 +131,7 @@ export default async function LandingPage() {
       {/* ── Footer ──────────────────────────────────────── */}
       <footer className="border-t border-ink-800 py-8">
         <div className="container-page flex flex-col sm:flex-row items-center justify-between gap-4 text-ink-600 text-xs">
-          <span>© 2025 TightSpotHelper. All rights reserved.</span>
+          <span>© 2026 TightSpotHelper. All rights reserved.</span>
           <div className="flex gap-6">
             <Link href="/privacy" className="hover:text-ink-400 transition-colors">Privacy</Link>
             <Link href="/terms"   className="hover:text-ink-400 transition-colors">Terms</Link>
