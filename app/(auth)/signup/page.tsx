@@ -1,5 +1,6 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -24,7 +25,7 @@ const ROLES = [
   },
 ]
 
-export default function SignupPage() {
+function SignupPageContent() {
   const router    = useRouter()
   const params    = useSearchParams()
 
@@ -242,5 +243,13 @@ export default function SignupPage() {
         </div>
       )}
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense>
+      <SignupPageContent />
+    </Suspense>
   )
 }

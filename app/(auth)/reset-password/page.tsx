@@ -1,10 +1,11 @@
 'use client'
 
+import { Suspense } from 'react'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { resetPassword } from '@/lib/auth-client'
 
-export default function ResetPasswordPage() {
+function ResetPasswordPageContent() {
   const router   = useRouter()
   const params   = useSearchParams()
 
@@ -63,5 +64,13 @@ export default function ResetPasswordPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordPageContent />
+    </Suspense>
   )
 }

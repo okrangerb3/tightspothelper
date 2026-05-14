@@ -10,12 +10,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const rec = await prisma.recording.findUnique({
     where:  { id: params.id },
-    select: { id: true, sessionId: true, plan: true, deletedAt: true, durationSeconds: true },
+    select: { id: true, sessionId: true, purchaseStatus: true, durationSeconds: true },
   })
 
-  if (!rec)          return NextResponse.json({ error: 'Not found' },         { status: 404 })
-  if (rec.deletedAt) return NextResponse.json({ error: 'Recording deleted' }, { status: 410 })
-  if (rec.plan !== 'free') return NextResponse.json({ error: 'Already purchased' }, { status: 409 })
+  if (!rec) return NextResponse.json({ error: 'Not found' },         { status: 404 })
+  if (rec.purchaseStatus === 'deleted') return NextResponse.json({ error: 'Recording deleted' }, { status: 410 })
+  if (rec.purchaseStatus !== 'free_window') return NextResponse.json({ error: 'Already purchased' }, { status: 409 })
 
   const s = await prisma.session.findUnique({
     where:  { id: rec.sessionId },
@@ -73,12 +73,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     await prisma.recording.update({
       where: { id: rec.id },
       data: {
-        plan:                    'per_session',
+        purchaseStatus:          'purchased',
         expiresAt:               null,
         stripePaymentIntentId:   pi.id,
       },
     })
-    return NextResponse.json({ ok: true, plan: 'per_session' })
+    return NextResponse.json({ ok: true, purchaseStatus: 'purchased' })
   }
 
   if (confirmed.status === 'requires_action') {

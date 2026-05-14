@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
       redirectTo: `${window.location.origin}/reset-password`,
     })
 
-    if (error) { setError(error.message); setLoading(false); return }
+    if (error) { setError(error.message ?? null); setLoading(false); return }
     setSent(true)
     setLoading(false)
   }

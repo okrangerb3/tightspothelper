@@ -4,11 +4,14 @@ export const authClient = createAuthClient({
   baseURL: process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000',
 })
 
-export const {
-  signIn,
-  signUp,
-  signOut,
-  useSession,
-  forgetPassword,
-  resetPassword,
-} = authClient
+export const { signIn, signUp, signOut, useSession } = authClient
+
+// forgetPassword / resetPassword are available at runtime but not typed
+// in the base createAuthClient — cast to access them
+export const forgetPassword = (authClient as any).forgetPassword as (
+  options: { email: string; redirectTo: string }
+) => Promise<{ data: unknown; error: { message?: string } | null }>
+
+export const resetPassword = (authClient as any).resetPassword as (
+  options: { newPassword: string; token?: string }
+) => Promise<{ data: unknown; error: { message?: string } | null }>

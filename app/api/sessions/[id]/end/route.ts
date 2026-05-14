@@ -46,23 +46,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   })
 
   // Increment expert session count
-  await prisma.expertProfile.update({
-    where: { id: s.expertId },
-    data:  { totalSessions: { increment: 1 } },
-  }).catch(() => {})
+  if (s.expertId) {
+    await prisma.expertProfile.update({
+      where: { id: s.expertId },
+      data:  { sessionCount: { increment: 1 } },
+    }).catch(() => {})
+  }
 
   // Send session summary email async
   prisma.authUser.findUnique({ where: { id: s.customerId }, select: { email: true, name: true } })
     .then(async customer => {
       if (!customer?.email) return
-      const expert = await prisma.authUser.findUnique({ where: { id: s.expertId }, select: { name: true } })
+      const expert = await prisma.authUser.findUnique({ where: { id: s.expertId! }, select: { name: true } })
       return sendSessionSummary(customer.email, {
         name:         customer.name ?? 'there',
         sessionId:    params.id,
         expertName:   expert?.name ?? 'your expert',
         notes:        notes ?? undefined,
         parts:        Array.isArray(parts_needed) ? parts_needed : undefined,
-        totalCharged: (s.customerTotal as number) ?? 0,
+        totalCharged: Number(s.customerTotal ?? 0),
         hasRecording: false,
       })
     })

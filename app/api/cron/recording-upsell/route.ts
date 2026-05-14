@@ -21,8 +21,7 @@ export async function POST(req: NextRequest) {
 
   const recs = await prisma.recording.findMany({
     where: {
-      plan:      'free',
-      deletedAt: null,
+      purchaseStatus: 'free_window',
       expiresAt: { gte: now, lte: in5 },
       id:        { notIn: alreadySentIds },
     },

@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       purchaseStatus: 'free_window',
       expiresAt:      { lte: now },
     },
-    select: { id: true, r2Key: true },
+    select: { id: true, r2KeyOriginal: true },
   })
 
   let deleted = 0
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   for (const rec of expired) {
     try {
-      if (rec.r2Key) await deleteObject(rec.r2Key)
+      if (rec.r2KeyOriginal) await deleteObject(rec.r2KeyOriginal)
       await prisma.recording.update({ where: { id: rec.id }, data: { purchaseStatus: 'deleted' } })
       deleted++
     } catch (err) {

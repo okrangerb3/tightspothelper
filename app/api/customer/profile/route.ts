@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 
 export async function GET() {
   const auth = await requireAuth()
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (auth.error) return auth.error
 
   const user = await prisma.authUser.findUnique({
     where: { id: auth.session.user.id },
@@ -15,7 +15,7 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   const auth = await requireAuth()
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (auth.error) return auth.error
 
   const body = await req.json()
   const user = await prisma.authUser.update({

@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 
 export async function GET(req: Request) {
   const auth = await requireAuth()
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (auth.error) return auth.error
 
   const { searchParams } = new URL(req.url)
   const sessionId = searchParams.get('sessionId')

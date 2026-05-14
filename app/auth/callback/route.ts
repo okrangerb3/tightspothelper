@@ -2,7 +2,7 @@
 // better-auth handles OAuth callbacks at /api/auth/callback/:provider
 import { NextResponse } from 'next/server'
 
-export async function GET() {
-  return NextResponse.redirect('/login?error=oauth_failed')
+export async function GET(request: Request) {
+  return NextResponse.redirect(new URL('/login?error=oauth_failed', request.url))
 }
 

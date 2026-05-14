@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
   const auth = await requireRole('expert')
-  if (auth.error) return NextResponse.json({ error: auth.error }, { status: auth.status })
+  if (auth.error) return auth.error
 
   const body = await req.json()
   const profile = await prisma.expertProfile.upsert({

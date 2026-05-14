@@ -9,11 +9,11 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
 
   const rec = await prisma.recording.findUnique({
     where:  { id: params.id },
-    select: { r2Key: true, r2AdminKey: true, sessionId: true, plan: true, deletedAt: true, expiresAt: true },
+    select: { r2KeyOriginal: true, r2KeyBackup: true, sessionId: true, purchaseStatus: true, expiresAt: true },
   })
 
   if (!rec) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  if (rec.deletedAt) return NextResponse.json({ error: 'Recording has been deleted' }, { status: 410 })
+  if (rec.purchaseStatus === 'deleted') return NextResponse.json({ error: 'Recording has been deleted' }, { status: 410 })
 
   const isAdmin = session.user.role === 'admin'
 
@@ -26,7 +26,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const key = isAdmin ? rec.r2AdminKey : rec.r2Key
+  const key = isAdmin ? rec.r2KeyBackup : rec.r2KeyOriginal
   const url = await getDownloadUrl(key!, 3600)
-  return NextResponse.json({ url, expiresAt: rec.expiresAt, plan: rec.plan })
+  return NextResponse.json({ url, expiresAt: rec.expiresAt, purchaseStatus: rec.purchaseStatus })
 }

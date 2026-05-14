@@ -31,6 +31,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   const revieweeId = isCustomer ? s.expertId : s.customerId
 
+  if (!revieweeId) return NextResponse.json({ error: 'Session incomplete' }, { status: 400 })
+
   const existing = await prisma.review.findFirst({
     where: { sessionId: params.id, reviewerId: authSession.user.id },
   })

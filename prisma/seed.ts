@@ -46,7 +46,8 @@ async function main() {
     },
   ]
 
-  for (const [i, cat] of categories.entries()) {
+  for (let i = 0; i < categories.length; i++) {
+    const cat = categories[i]
     await prisma.category.upsert({
       where: { slug: cat.slug },
       update: {},
@@ -69,12 +70,12 @@ async function main() {
   console.log('\nSeeding demo users...')
 
   // Demo customer
-  const customer = await auth.api.createUser?.({
+  const customer = await auth.api.signUpEmail({
     body: { email: 'customer@demo.test', password: 'password123', name: 'Jamie Homeowner' },
   }).catch(() => null)
 
   // Demo expert
-  const expert = await auth.api.createUser?.({
+  const expert = await auth.api.signUpEmail({
     body: { email: 'expert@demo.test', password: 'password123', name: 'Alex Plumber' },
   }).catch(() => null)
 
