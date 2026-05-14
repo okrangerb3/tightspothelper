@@ -133,10 +133,6 @@ export default function PhotoPanel({ sessionId, userId, stage }: PhotoPanelProps
   )
 }
 
-  stage: 'pre' | 'during'
-  uploaded_by: string
-  url?: string
-}
 
 interface PhotoPanelProps {
   sessionId: string

@@ -13,8 +13,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
-  const admin = createAdminClient()
-
   switch (event.type) {
 
     // ── SetupIntent succeeded — card saved ───────────────────
