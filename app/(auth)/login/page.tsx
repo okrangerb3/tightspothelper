@@ -34,8 +34,11 @@ function LoginPageContent() {
         return
       }
 
+      console.log('[Login] Auth successful, user data:', data?.user)
       const role = (data?.user as any)?.role ?? 'customer'
-      router.push(redirectTo ?? `/${role}/dashboard`)
+      const redirectUrl = redirectTo ?? `/${role}/dashboard`
+      console.log('[Login] Redirecting to:', redirectUrl)
+      router.push(redirectUrl)
       router.refresh()
     } catch (caughtError) {
       console.error('[Login] Caught error:', caughtError)
