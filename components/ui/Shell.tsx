@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { authClient } from '@/lib/auth-client'
 
 interface NavItem { href: string; label: string; icon: string }
 
@@ -36,11 +36,8 @@ interface SidebarProps { role: 'customer' | 'expert' | 'admin'; userName?: strin
 export function Sidebar({ role, userName }: SidebarProps) {
   const pathname = usePathname()
   const router   = useRouter()
-  const supabase = createClient()
-  const items    = NAV[role] ?? []
-
   const signOut = async () => {
-    await supabase.auth.signOut()
+    await authClient.signOut()
     router.push('/login')
     router.refresh()
   }

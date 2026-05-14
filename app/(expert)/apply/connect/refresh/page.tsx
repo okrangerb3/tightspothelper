@@ -1,18 +1,21 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
+import { prisma } from '@/lib/db'
 import { createConnectOnboardingLink } from '@/lib/stripe'
 
-// Stripe redirects here if onboarding link expires — we generate a fresh one
 export default async function ConnectRefreshPage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
+  const userId = session.user.id
 
-  const { data: expert } = await supabase
-    .from('expert_profiles').select('stripe_connect_id').eq('id', user.id).single()
+  const expert = await prisma.expertProfile.findUnique({
+    where:  { id: userId },
+    select: { stripeConnectId: true },
+  })
 
-  if (!expert?.stripe_connect_id) redirect('/expert/apply/connect')
+  if (!expert?.stripeConnectId) redirect('/expert/apply/connect')
 
-  const { url } = await createConnectOnboardingLink(expert.stripe_connect_id)
+  const { url } = await createConnectOnboardingLink(expert.stripeConnectId!)
   redirect(url)
 }

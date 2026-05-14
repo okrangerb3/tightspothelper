@@ -1,39 +1,32 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
+import { prisma } from '@/lib/db'
 import { stripe, createConnectOnboardingLink } from '@/lib/stripe'
 
 export default async function ExpertConnectPage({ searchParams }: { searchParams: { status?: string } }) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
+  const userId = session.user.id
 
-  const { data: expert } = await supabase
-    .from('expert_profiles')
-    .select('stripe_connect_id, stripe_connect_onboarded')
-    .eq('id', user.id).single()
+  const expert = await prisma.expertProfile.findUnique({
+    where:  { id: userId },
+    select: { stripeConnectId: true, stripeConnectOnboarded: true },
+  })
 
-  // If already onboarded, go to dashboard
-  if (expert?.stripe_connect_onboarded) redirect('/expert/dashboard')
+  if (expert?.stripeConnectOnboarded) redirect('/expert/dashboard')
 
-  // Create Stripe Connect account if not yet created
-  let connectId = expert?.stripe_connect_id
+  let connectId = expert?.stripeConnectId
   if (!connectId) {
-    const { data: profile } = await supabase
-      .from('profiles').select('full_name').eq('id', user.id).single()
-
     const account = await stripe.accounts.create({
       type: 'express',
       capabilities: { transfers: { requested: true } },
-      metadata: { supabase_user_id: user.id },
+      metadata: { user_id: userId },
     })
     connectId = account.id
-
-    await supabase.from('expert_profiles')
-      .update({ stripe_connect_id: connectId })
-      .eq('id', user.id)
+    await prisma.expertProfile.update({ where: { id: userId }, data: { stripeConnectId: connectId } })
   }
 
-  // Generate onboarding link and redirect immediately
   const { url } = await createConnectOnboardingLink(connectId)
   redirect(url)
 }

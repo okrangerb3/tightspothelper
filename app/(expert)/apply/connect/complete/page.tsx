@@ -1,23 +1,23 @@
 import { redirect } from 'next/navigation'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { headers } from 'next/headers'
+import { prisma } from '@/lib/db'
 import { stripe } from '@/lib/stripe'
 
-// /expert/apply/connect/complete — Stripe redirects here after onboarding
 export default async function ConnectCompletePage() {
-  const supabase = createClient()
-  const admin    = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
+  const userId = session.user.id
 
-  const { data: expert } = await supabase
-    .from('expert_profiles').select('stripe_connect_id').eq('id', user.id).single()
+  const expert = await prisma.expertProfile.findUnique({
+    where:  { id: userId },
+    select: { stripeConnectId: true },
+  })
 
-  if (expert?.stripe_connect_id) {
-    const account = await stripe.accounts.retrieve(expert.stripe_connect_id)
+  if (expert?.stripeConnectId) {
+    const account = await stripe.accounts.retrieve(expert.stripeConnectId)
     if (account.details_submitted) {
-      await admin.from('expert_profiles')
-        .update({ stripe_connect_onboarded: true })
-        .eq('id', user.id)
+      await prisma.expertProfile.update({ where: { id: userId }, data: { stripeConnectOnboarded: true } })
     }
   }
 
