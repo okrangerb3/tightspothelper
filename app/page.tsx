@@ -5,12 +5,14 @@ import { redirect } from 'next/navigation'
 import { Logo } from '@/components/ui/Logo'
 
 const CATEGORIES = [
-  { icon: '🔧', name: 'Plumbing',   desc: 'Leaks, drains, fixtures' },
-  { icon: '⚡', name: 'Electrical', desc: 'Outlets, panels, wiring' },
-  { icon: '❄️', name: 'HVAC',       desc: 'Heating & cooling' },
-  { icon: '🏠', name: 'Appliances', desc: 'Washers, fridges, dryers' },
-  { icon: '🪚', name: 'Carpentry',  desc: 'Doors, trim, furniture' },
-  { icon: '🔨', name: 'Handyman',   desc: 'Everything else' },
+  { icon: '🔧', name: 'Plumbing',    desc: 'Leaks, clogs & water damage' },
+  { icon: '⚡', name: 'Electrical',  desc: 'Outlets, breakers & wiring' },
+  { icon: '❄️', name: 'HVAC',        desc: 'AC, heat & air quality' },
+  { icon: '🏠', name: 'Appliances',  desc: 'Washers, dryers & fridges' },
+  { icon: '🪚', name: 'Carpentry',   desc: 'Doors, trim & woodwork' },
+  { icon: '🔨', name: 'Handyman',    desc: 'Odd jobs & general repairs' },
+  { icon: '🚗', name: 'Automotive',  desc: 'Engine, brakes & diagnostics' },
+  { icon: '⛵', name: 'Marine',      desc: 'Boats, motors & onboard systems' },
 ]
 
 const STEPS = [
@@ -79,7 +81,7 @@ export default async function LandingPage() {
         <p className="text-xs font-medium text-ink-500 tracking-widest uppercase mb-6 text-center">
           What do you need help with?
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
           {CATEGORIES.map((cat, i) => (
             <Link
               key={cat.name}
