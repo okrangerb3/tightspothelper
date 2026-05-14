@@ -2,27 +2,25 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-helpers'
 import { prisma } from '@/lib/db'
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   const { session, error } = await requireAuth()
   if (error) return error
+
+  const { searchParams } = new URL(req.url)
+  const cursor = searchParams.get('cursor') ?? undefined
+  const take   = 20
 
   const notifications = await prisma.notification.findMany({
-    where:   { userId: session.user.id, readAt: null },
+    where:   { userId: session.user.id },
     orderBy: { createdAt: 'desc' },
-    take:    20,
+    take,
+    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
   })
-  return NextResponse.json({ notifications })
+
+  const nextCursor = notifications.length === take
+    ? notifications[notifications.length - 1].id
+    : null
+
+  return NextResponse.json({ notifications, nextCursor })
 }
 
-export async function PATCH(req: NextRequest) {
-  const { session, error } = await requireAuth()
-  if (error) return error
-
-  const { ids } = await req.json()
-
-  await prisma.notification.updateMany({
-    where: { id: { in: ids }, userId: session.user.id },
-    data:  { readAt: new Date() },
-  })
-  return NextResponse.json({ ok: true })
-}

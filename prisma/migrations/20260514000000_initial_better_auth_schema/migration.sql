@@ -177,8 +177,7 @@ CREATE TABLE "session_photos" (
     "id" TEXT NOT NULL,
     "sessionId" TEXT NOT NULL,
     "uploadedBy" TEXT NOT NULL,
-    "url" TEXT NOT NULL,
-    "r2Key" TEXT NOT NULL,
+    "storagePath" TEXT NOT NULL,
     "stage" "PhotoStage" NOT NULL DEFAULT 'pre',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 

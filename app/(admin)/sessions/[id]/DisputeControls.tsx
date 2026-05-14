@@ -100,11 +100,11 @@ export default function DisputeControls({ session, dispute }: { session: any; di
         <div className="space-y-2">
           <button onClick={() => issueRefund(true)} disabled={loading}
             className="w-full text-sm px-4 py-2.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-50">
-            {loading ? '…' : `Full refund ($${(session.customer_total ?? 0).toFixed(2)})`}
+            {loading ? '…' : `Full refund ($${((session.expertPayout ?? 0) + (session.platformFee ?? 0)).toFixed(2)})`}
           </button>
           <div className="flex gap-2">
             <input type="number" placeholder="Custom amount" step="0.01" min="0.01"
-              max={session.customer_total} className="input text-sm py-2"
+              max={(Number(session.expertPayout ?? 0) + Number(session.platformFee ?? 0)).toString()} className="input text-sm py-2"
               value={refundAmt} onChange={e => setRefundAmt(e.target.value)} />
             <button onClick={() => issueRefund(false)} disabled={loading || !refundAmt}
               className="btn-ghost text-sm py-2 shrink-0 disabled:opacity-50">

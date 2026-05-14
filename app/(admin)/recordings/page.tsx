@@ -16,19 +16,20 @@ export default async function AdminRecordings() {
     take: 50,
   })
 
-  const totalBytes    = recordings.reduce((sum, r) => sum + (r.sizeBytes ?? 0), 0)
-  const freeBytes     = recordings.filter(r => r.plan === 'free' && !r.deletedAt).reduce((sum, r) => sum + (r.sizeBytes ?? 0), 0)
-  const paidBytes     = recordings.filter(r => r.plan !== 'free').reduce((sum, r) => sum + (r.sizeBytes ?? 0), 0)
+  const totalBytes    = recordings.reduce((sum, r) => sum + Number(r.fileSizeBytes ?? 0), 0)
+  const freeBytes     = recordings.filter(r => r.purchaseStatus === 'free_window').reduce((sum, r) => sum + Number(r.fileSizeBytes ?? 0), 0)
+  const paidBytes     = recordings.filter(r => r.purchaseStatus === 'purchased').reduce((sum, r) => sum + Number(r.fileSizeBytes ?? 0), 0)
   const r2Cost        = totalBytes / 1024 / 1024 / 1024 * 0.015
-  const expiringCount = recordings.filter(r => r.plan === 'free' && !r.deletedAt && r.expiresAt &&
+  const expiringCount = recordings.filter(r => r.purchaseStatus === 'free_window' && r.expiresAt &&
     new Date(r.expiresAt) < new Date(Date.now() + 7 * 86400000)).length
 
   const fmt = (bytes: number) => bytes > 1e9 ? `${(bytes / 1e9).toFixed(1)} GB` : `${(bytes / 1e6).toFixed(0)} MB`
 
-  const PLAN_STYLE: Record<string, string> = {
-    free:         'bg-ink-800 text-ink-400',
-    per_session:  'bg-blue-500/10 text-blue-400',
-    subscription: 'bg-purple-500/10 text-purple-400',
+  const STATUS_STYLE: Record<string, string> = {
+    free_window: 'bg-ink-800 text-ink-400',
+    purchased:   'bg-blue-500/10 text-blue-400',
+    expired:     'bg-yellow-500/10 text-yellow-500',
+    deleted:     'bg-red-500/10 text-red-400',
   }
 
   return (
@@ -55,7 +56,7 @@ export default async function AdminRecordings() {
               : null
 
             return (
-              <div key={rec.id} className={`card p-4 ${rec.deletedAt ? 'opacity-40' : ''}`}>
+              <div key={rec.id} className="card p-4">
                 <div className="flex items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-ink-100 truncate">
@@ -64,21 +65,21 @@ export default async function AdminRecordings() {
                     <p className="text-xs text-ink-500 mt-0.5">
                       {rec.session?.customer?.name ?? '—'}
                       {' · '}{rec.durationSeconds ? `${Math.floor(rec.durationSeconds / 60)}m` : '—'}
-                      {' · '}{fmt(rec.sizeBytes ?? 0)}
+                      {' · '}{fmt(Number(rec.fileSizeBytes ?? 0))}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-3 shrink-0">
-                    {daysLeft !== null && !rec.deletedAt && (
+                    {daysLeft !== null && rec.purchaseStatus === 'free_window' && (
                       <span className={`text-xs ${daysLeft <= 5 ? 'text-red-400' : daysLeft <= 10 ? 'text-yellow-400' : 'text-ink-500'}`}>
-                        {rec.deletedAt ? 'Deleted' : daysLeft > 0 ? `${daysLeft}d left` : 'Expired'}
+                        {daysLeft > 0 ? `${daysLeft}d left` : 'Expired'}
                       </span>
                     )}
-                    {rec.deletedAt && <span className="text-xs text-ink-600">Deleted</span>}
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${PLAN_STYLE[rec.plan]}`}>
-                      {rec.plan.replace('_', ' ')}
+                    {rec.purchaseStatus === 'deleted' && <span className="text-xs text-ink-600">Deleted</span>}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full ${STATUS_STYLE[rec.purchaseStatus]}`}>
+                      {rec.purchaseStatus.replace('_', ' ')}
                     </span>
-                    {!rec.deletedAt && <RecordingActions recordingId={rec.id} plan={rec.plan} />}
+                    {rec.purchaseStatus !== 'deleted' && <RecordingActions recordingId={rec.id} purchaseStatus={rec.purchaseStatus} />}
                   </div>
                 </div>
               </div>

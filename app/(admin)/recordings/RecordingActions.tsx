@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-export default function RecordingActions({ recordingId, plan }: { recordingId: string; plan: string }) {
+export default function RecordingActions({ recordingId, purchaseStatus }: { recordingId: string; purchaseStatus: string }) {
   const router  = useRouter()
   const [open, setOpen]     = useState(false)
   const [loading, setLoading] = useState(false)
@@ -35,7 +35,7 @@ export default function RecordingActions({ recordingId, plan }: { recordingId: s
               className="w-full text-left px-4 py-2 text-xs text-ink-300 hover:bg-ink-800 hover:text-white transition-colors">
               Get download link
             </button>
-            {plan === 'free' && (
+            {purchaseStatus === 'free_window' && (
               <button onClick={extend} disabled={loading}
                 className="w-full text-left px-4 py-2 text-xs text-ink-300 hover:bg-ink-800 hover:text-white transition-colors disabled:opacity-50">
                 {loading ? 'Extending…' : 'Extend 30 days'}

@@ -31,7 +31,30 @@ export async function POST(req: NextRequest) {
   const ext         = fileName.split('.').pop() ?? 'jpg'
   const safeFile    = `${crypto.randomUUID()}.${ext}`
   const storagePath = keys.photo(sessionId, stage, safeFile)
-  const uploadUrl   = await getUploadUrl(storagePath, contentType)
 
-  return NextResponse.json({ uploadUrl, storagePath })
+  // Create the DB record now; upload happens client-side directly to R2
+  const photo = await prisma.sessionPhoto.create({
+    data: {
+      sessionId,
+      uploadedBy:  session.user.id,
+      storagePath,
+      stage:       stage as 'pre' | 'during',
+    },
+  })
+
+  const uploadUrl = await getUploadUrl(storagePath, contentType)
+
+  // Emit photo:added to the session socket room so other clients update in real-time
+  const io = (globalThis as Record<string, unknown>).__io as any
+  io?.to(`session:${sessionId}`).emit('photo:added', {
+    id: photo.id,
+    sessionId,
+    uploadedBy: session.user.id,
+    storagePath,
+    stage,
+    createdAt: photo.createdAt.toISOString(),
+  })
+
+  return NextResponse.json({ uploadUrl, photoId: photo.id, storagePath })
 }
+

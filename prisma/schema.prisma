@@ -256,14 +256,13 @@ model Session {
 // ── Session photos ────────────────────────────────────────────
 
 model SessionPhoto {
-  id         String     @id @default(uuid())
-  sessionId  String
-  session    Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  uploadedBy String
-  url        String
-  r2Key      String
-  stage      PhotoStage @default(pre)
-  createdAt  DateTime   @default(now())
+  id          String     @id @default(uuid())
+  sessionId   String
+  session     Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  uploadedBy  String
+  storagePath String
+  stage       PhotoStage @default(pre)
+  createdAt   DateTime   @default(now())
 
   @@map("session_photos")
 }
