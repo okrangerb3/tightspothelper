@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/api-helpers'
+import { prisma } from '@/lib/db'
 import { stripe } from '@/lib/stripe'
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
-  const admin    = createAdminClient()
+  const { session, error } = await requireAuth()
+  if (error) return error
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const user = await prisma.authUser.findUnique({
+    where: { id: session.user.id },
+    select: { stripeCustomerId: true },
+  })
 
-  const { data: profile } = await admin
-    .from('profiles').select('stripe_customer_id').eq('id', user.id).single()
-
-  if (!profile?.stripe_customer_id)
+  if (!user?.stripeCustomerId)
     return NextResponse.json({ error: 'No billing account found' }, { status: 404 })
 
   const { returnUrl } = await req.json().catch(() => ({}))
 
   const portalSession = await stripe.billingPortal.sessions.create({
-    customer:   profile.stripe_customer_id,
+    customer:   user.stripeCustomerId,
     return_url: returnUrl ?? `${process.env.NEXT_PUBLIC_APP_URL}/customer/storage`,
   })
 

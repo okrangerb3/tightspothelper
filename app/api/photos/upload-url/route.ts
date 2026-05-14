@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/api-helpers'
+import { prisma } from '@/lib/db'
 import { getUploadUrl, keys } from '@/lib/r2'
 import { z } from 'zod'
 
@@ -11,9 +12,8 @@ const Schema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { session, error } = await requireAuth()
+  if (error) return error
 
   const body   = await req.json()
   const parsed = Schema.safeParse(body)
@@ -21,10 +21,11 @@ export async function POST(req: NextRequest) {
 
   const { sessionId, stage, fileName, contentType } = parsed.data
 
-  // Verify user is a participant
-  const { data: session } = await supabase.from('sessions').select('customer_id,expert_id')
-    .eq('id', sessionId).single()
-  if (!session || (session.customer_id !== user.id && session.expert_id !== user.id))
+  const s = await prisma.session.findUnique({
+    where:  { id: sessionId },
+    select: { customerId: true, expertId: true },
+  })
+  if (!s || (s.customerId !== session.user.id && s.expertId !== session.user.id))
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const ext         = fileName.split('.').pop() ?? 'jpg'

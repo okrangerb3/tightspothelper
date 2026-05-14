@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyStripeWebhook, stripe } from '@/lib/stripe'
-import { createAdminClient } from '@/lib/supabase/server'
+import { verifyStripeWebhook } from '@/lib/stripe'
+import { prisma } from '@/lib/db'
 
 export async function POST(req: NextRequest) {
   const payload   = await req.text()

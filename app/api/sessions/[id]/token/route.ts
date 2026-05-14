@@ -1,30 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
-import { createMeetingToken } from '@/lib/daily'
-import { captureSessionPayment } from '@/lib/stripe'
+import { requireAuth } from '@/lib/api-helpers'
+import { prisma } from '@/lib/db'
 
-// POST /api/sessions/[id]/token — get Daily meeting token
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+// POST /api/sessions/[id]/token — activate session and return Jitsi room info
+export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+  const { session, error } = await requireAuth()
+  if (error) return error
 
-  const { data: session } = await supabase.from('sessions')
-    .select('daily_room_name,expert_id,customer_id,status')
-    .eq('id', params.id).single()
+  const s = await prisma.session.findUnique({
+    where:  { id: params.id },
+    select: { expertId: true, customerId: true, status: true },
+  })
 
-  if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (!s) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const isParticipant = session.customer_id === user.id || session.expert_id === user.id
+  const isParticipant = s.customerId === session.user.id || s.expertId === session.user.id
   if (!isParticipant) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const isExpert = session.expert_id === user.id
-
-  // Activate session on first token request
-  if (session.status === 'pending') {
-    await supabase.from('sessions').update({ status: 'active', started_at: new Date().toISOString() }).eq('id', params.id)
+  if (s.status === 'pending') {
+    await prisma.session.update({
+      where: { id: params.id },
+      data:  { status: 'active', startedAt: new Date() },
+    })
   }
 
-  const { token } = await createMeetingToken(session.daily_room_name, user.id, isExpert)
-  return NextResponse.json({ token })
+  // Jitsi uses public room — no token needed. Return room name for client.
+  return NextResponse.json({ roomName: `tsh-${params.id}` })
 }

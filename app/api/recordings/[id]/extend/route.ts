@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { requireRole } from '@/lib/api-helpers'
+import { prisma } from '@/lib/db'
 
 export async function POST(_: NextRequest, { params }: { params: { id: string } }) {
-  const supabase = createClient()
-  const admin    = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { error } = await requireRole('admin')
+  if (error) return error
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // Extend free recording by 30 more days
+  const rec = await prisma.recording.findUnique({
+    where:  { id: params.id },
+    select: { expiresAt: true },
+  })
+  if (!rec) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { error } = await admin.rpc('extend_recording', { rec_id: params.id })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ ok: true })
+  const newExpiry = new Date((rec.expiresAt ?? new Date()).getTime() + 30 * 86400000)
+  await prisma.recording.update({
+    where: { id: params.id },
+    data:  { expiresAt: newExpiry },
+  })
+  return NextResponse.json({ ok: true, expiresAt: newExpiry })
 }

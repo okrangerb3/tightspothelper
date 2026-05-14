@@ -1,37 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/api-helpers'
+import { prisma } from '@/lib/db'
 import { stripe } from '@/lib/stripe'
 
-export async function POST(req: NextRequest) {
-  const supabase = createClient()
-  const admin    = createAdminClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+export async function POST(_req: NextRequest) {
+  const { session, error } = await requireAuth()
+  if (error) return error
 
-  // Ensure Stripe customer exists
-  let { data: profile } = await admin
-    .from('profiles').select('stripe_customer_id, full_name').eq('id', user.id).single()
+  const userRecord = await prisma.authUser.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, email: true, name: true, stripeCustomerId: true },
+  })
 
-  let stripeCustomerId = profile?.stripe_customer_id
+  let stripeCustomerId = userRecord?.stripeCustomerId ?? null
+
   if (!stripeCustomerId) {
-    const { data: emailRow } = await admin
-      .from('user_emails' as any).select('email').eq('id', user.id).single()
-
     const customer = await stripe.customers.create({
-      email:    (emailRow as any)?.email,
-      name:     profile?.full_name ?? undefined,
-      metadata: { supabase_user_id: user.id },
+      email:    userRecord?.email ?? undefined,
+      name:     userRecord?.name  ?? undefined,
+      metadata: { userId: session.user.id },
     })
     stripeCustomerId = customer.id
-    await admin.from('profiles').update({ stripe_customer_id: stripeCustomerId }).eq('id', user.id)
+    await prisma.authUser.update({
+      where: { id: session.user.id },
+      data:  { stripeCustomerId },
+    })
   }
 
-  // Create SetupIntent — allows saving card without charging
   const setupIntent = await stripe.setupIntents.create({
     customer:             stripeCustomerId,
     payment_method_types: ['card'],
-    usage:                'off_session', // card will be charged server-side
-    metadata:             { supabase_user_id: user.id },
+    usage:                'off_session',
+    metadata:             { userId: session.user.id },
   })
 
   return NextResponse.json({ clientSecret: setupIntent.client_secret })
