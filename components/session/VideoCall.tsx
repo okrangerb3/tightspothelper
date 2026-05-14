@@ -128,16 +128,6 @@ export default function VideoCall({ sessionId, isExpert, onSessionEnd }: VideoCa
     </div>
   )
 }
-
-interface VideoCallProps {
-  roomUrl:   string
-  token:     string
-  sessionId: string
-  isExpert:  boolean
-  onSessionEnd: (durationSeconds: number) => void
-}
-
-export default function VideoCall({ roomUrl, token, sessionId, isExpert, onSessionEnd }: VideoCallProps) {
   const containerRef  = useRef<HTMLDivElement>(null)
   const callRef       = useRef<DailyCall | null>(null)
   const [status, setStatus]       = useState<'loading' | 'connected' | 'error'>('loading')

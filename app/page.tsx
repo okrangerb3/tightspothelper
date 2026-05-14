@@ -141,32 +141,6 @@ export default async function LandingPage() {
   )
 }
 
-
-  return (
-    <div className="min-h-screen">
-      {/* ── Nav ─────────────────────────────────────────── */}
-      <nav className="container-page flex items-center justify-between py-5">
-        <span className="font-display text-xl font-bold text-white tracking-tight">
-          TightSpot<span className="text-brand-500">Helper</span>
-        </span>
-        <div className="flex items-center gap-3">
-          <Link href="/login"  className="btn-ghost text-sm py-2 px-4">Sign in</Link>
-          <Link href="/signup" className="btn-primary text-sm py-2 px-4">Get help now</Link>
-        </div>
-      </nav>
-
-      {/* ── Hero ────────────────────────────────────────── */}
-      <section className="container-page pt-16 pb-24 text-center">
-        <div className="inline-flex items-center gap-2 bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-medium px-3 py-1.5 rounded-full mb-8 animate-fade-in">
-          <span className="w-1.5 h-1.5 bg-brand-400 rounded-full" />
-          Vetted experts available now
-        </div>
-
-        <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-extrabold text-white leading-[1.05] tracking-tight mb-6 animate-fade-up">
-          Stuck on something<br />
-          <span className="text-brand-500">broken?</span>
-        </h1>
-
         <p className="text-ink-400 text-lg sm:text-xl max-w-xl mx-auto mb-10 animate-fade-up" style={{ animationDelay: '80ms' }}>
           Get a vetted expert on a live video call in minutes. Show them the problem, get it fixed.
         </p>

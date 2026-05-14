@@ -164,15 +164,6 @@ export default function PhotoPanel({ sessionId, userId, stage }: PhotoPanelProps
     </div>
   )
 }
-
-
-interface PhotoPanelProps {
-  sessionId: string
-  userId:    string
-  stage:     'pre' | 'during'
-}
-
-export default function PhotoPanel({ sessionId, userId, stage }: PhotoPanelProps) {
   const [photos, setPhotos]       = useState<Photo[]>([])
   const [uploading, setUploading] = useState(false)
   const [selected, setSelected]   = useState<Photo | null>(null)
