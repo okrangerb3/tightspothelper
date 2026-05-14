@@ -11,9 +11,8 @@ export async function POST(req: NextRequest) {
 
   const expired = await prisma.recording.findMany({
     where: {
-      plan:      'free',
-      expiresAt: { lte: now },
-      deletedAt: null,
+      purchaseStatus: 'free_window',
+      expiresAt:      { lte: now },
     },
     select: { id: true, r2Key: true },
   })
@@ -24,7 +23,7 @@ export async function POST(req: NextRequest) {
   for (const rec of expired) {
     try {
       if (rec.r2Key) await deleteObject(rec.r2Key)
-      await prisma.recording.update({ where: { id: rec.id }, data: { deletedAt: now } })
+      await prisma.recording.update({ where: { id: rec.id }, data: { purchaseStatus: 'deleted' } })
       deleted++
     } catch (err) {
       console.error(`Failed to delete recording ${rec.id}:`, err)
