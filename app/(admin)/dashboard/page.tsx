@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { PageShell, StatCard } from '@/components/ui/Shell'
+import { StatCard } from '@/components/ui/Shell'
 
 export default async function AdminDashboard() {
   const supabase = createClient()
@@ -46,8 +46,7 @@ export default async function AdminDashboard() {
   }
 
   return (
-    <PageShell role="admin" userName={profile?.full_name}>
-      <div className="p-8 max-w-6xl">
+    <div className="p-8 max-w-6xl">
         <div className="flex items-center justify-between mb-8">
           <h1 className="font-display text-2xl font-bold text-white">Admin overview</h1>
           <p className="text-xs text-ink-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -140,7 +139,6 @@ export default async function AdminDashboard() {
             )}
           </div>
         </div>
-      </div>
-    </PageShell>
+    </div>
   )
 }

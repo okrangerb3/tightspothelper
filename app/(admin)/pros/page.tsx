@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { PageShell } from '@/components/ui/Shell'
 import ProActions from './ProActions'
 
 export default async function AdminPros({ searchParams }: { searchParams: { filter?: string } }) {
@@ -30,8 +29,7 @@ export default async function AdminPros({ searchParams }: { searchParams: { filt
   }
 
   return (
-    <PageShell role="admin" userName={profile?.full_name}>
-      <div className="p-8 max-w-5xl">
+    <div className="p-8 max-w-5xl">
         <h1 className="font-display text-2xl font-bold text-white mb-6">Expert management</h1>
 
         {/* Filter tabs */}
@@ -85,7 +83,6 @@ export default async function AdminPros({ searchParams }: { searchParams: { filt
             ))}
           </div>
         )}
-      </div>
-    </PageShell>
+    </div>
   )
 }

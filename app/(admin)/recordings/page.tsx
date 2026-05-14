@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { PageShell, StatCard } from '@/components/ui/Shell'
+import { StatCard } from '@/components/ui/Shell'
 import RecordingActions from './RecordingActions'
 
 export default async function AdminRecordings() {
@@ -32,8 +32,7 @@ export default async function AdminRecordings() {
   }
 
   return (
-    <PageShell role="admin" userName={profile?.full_name}>
-      <div className="p-8 max-w-5xl">
+    <div className="p-8 max-w-5xl">
         <h1 className="font-display text-2xl font-bold text-white mb-6">Recording storage</h1>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
@@ -87,6 +86,6 @@ export default async function AdminRecordings() {
           })}
         </div>
       </div>
-    </PageShell>
+    </div>
   )
 }
