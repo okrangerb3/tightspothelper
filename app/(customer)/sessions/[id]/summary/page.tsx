@@ -1,40 +1,40 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { headers } from 'next/headers'
 import ReviewForm from './ReviewForm'
 
 export default async function SessionSummaryPage({ params }: { params: { id: string } }) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
+  const user = session.user
 
-  const { data: session } = await supabase
-    .from('sessions')
-    .select(`
-      *, category:category_id(name,icon),
-      expert:expert_id(full_name, rating_avg),
-      customer:customer_id(full_name)
-    `)
-    .eq('id', params.id)
-    .single()
+  const dbSession = await prisma.session.findUnique({
+    where: { id: params.id },
+    include: {
+      category: { select: { name: true, icon: true } },
+      expert: { select: { ratingAvg: true, user: { select: { name: true } } } },
+      customer: { select: { user: { select: { name: true } } } },
+      photos: { select: { id: true, stage: true, storagePath: true } },
+      recordings: { select: { id: true, plan: true, expiresAt: true, deletedAt: true, durationSeconds: true }, take: 1 },
+    },
+  })
 
-  if (!session) notFound()
-  if (session.customer_id !== user.id) redirect('/customer/sessions')
+  if (!dbSession) notFound()
+  if (dbSession.customerId !== user.id) redirect('/customer/sessions')
 
-  const { data: photos } = await supabase
-    .from('session_photos').select('id,stage,file_name').eq('session_id', params.id)
+  const recording = dbSession.recordings?.[0] ?? null
+  const photos    = dbSession.photos
 
-  const { data: recording } = await supabase
-    .from('recordings').select('id,plan,expires_at,deleted_at,duration_seconds')
-    .eq('session_id', params.id).maybeSingle()
+  const review = await prisma.review.findFirst({
+    where: { sessionId: params.id, reviewerId: user.id },
+    select: { rating: true, comment: true },
+  })
 
-  const { data: review } = await supabase
-    .from('reviews').select('rating,comment').eq('session_id', params.id)
-    .eq('reviewer_id', user.id).maybeSingle()
-
-  const hasRec   = recording && !recording.deleted_at
-  const daysLeft = recording?.expires_at
-    ? Math.ceil((new Date(recording.expires_at).getTime() - Date.now()) / 86400000) : null
+  const hasRec   = recording && !recording.deletedAt
+  const daysLeft = recording?.expiresAt
+    ? Math.ceil((new Date(recording.expiresAt).getTime() - Date.now()) / 86400000) : null
 
   return (
     <div className="p-8 max-w-2xl">
@@ -45,16 +45,16 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-xs text-ink-500">{(session.category as any)?.name}</span>
+          <span className="text-xs text-ink-500">{dbSession.category?.name}</span>
           <span className={`text-[10px] px-2 py-0.5 rounded-full border
             ${session.status === 'completed' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-ink-800 text-ink-400 border-ink-700'}`}>
-            {session.status}
+            {dbSession.status}
           </span>
         </div>
-        <h1 className="font-display text-2xl font-bold text-white">{session.problem_title}</h1>
+        <h1 className="font-display text-2xl font-bold text-white">{dbSession.problemTitle}</h1>
         <p className="text-ink-400 text-sm mt-1">
-          With {(session.expert as any)?.full_name} · {new Date(session.created_at).toLocaleDateString()}
-          {session.duration_billed_minutes ? ` · ${session.duration_billed_minutes} min` : ''}
+          With {dbSession.expert?.user?.name} · {new Date(dbSession.createdAt).toLocaleDateString()}
+          {dbSession.durationBilledMins ? ` · ${dbSession.durationBilledMins} min` : ''}
         </p>
       </div>
 
@@ -78,33 +78,33 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
       )}
 
       {/* Payment summary */}
-      {session.customer_total && (
+      {dbSession.customerTotal && (
         <div className="card p-5 mb-4">
           <h2 className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-3">Payment</h2>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span className="text-ink-400">Session subtotal</span><span>${(session.session_subtotal as number)?.toFixed(2)}</span></div>
-            <div className="flex justify-between"><span className="text-ink-400">Service fee</span><span>${(session.platform_fee_amount as number)?.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-ink-400">Session subtotal</span><span>${(dbSession.sessionSubtotal as number)?.toFixed(2)}</span></div>
+            <div className="flex justify-between"><span className="text-ink-400">Service fee</span><span>${(dbSession.platformFeeAmount as number)?.toFixed(2)}</span></div>
             <div className="flex justify-between font-medium border-t border-ink-800 pt-2 mt-2">
-              <span>Total charged</span><span className="text-brand-400">${(session.customer_total as number).toFixed(2)}</span>
+              <span>Total charged</span><span className="text-brand-400">${(dbSession.customerTotal as number).toFixed(2)}</span>
             </div>
           </div>
         </div>
       )}
 
       {/* Expert notes */}
-      {session.notes && (
+      {dbSession.expertNotes && (
         <div className="card p-5 mb-4">
           <h2 className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-3">Expert notes</h2>
-          <p className="text-sm text-ink-200 leading-relaxed whitespace-pre-wrap">{session.notes}</p>
+          <p className="text-sm text-ink-200 leading-relaxed whitespace-pre-wrap">{dbSession.expertNotes}</p>
         </div>
       )}
 
       {/* Parts needed */}
-      {Array.isArray(session.parts_needed) && (session.parts_needed as string[]).length > 0 && (
+      {Array.isArray(dbSession.partsNeeded) && (dbSession.partsNeeded as string[]).length > 0 && (
         <div className="card p-5 mb-4">
           <h2 className="text-xs font-medium text-ink-500 uppercase tracking-wide mb-3">Parts needed</h2>
           <div className="flex flex-wrap gap-2">
-            {(session.parts_needed as string[]).map((p: string, i: number) => (
+            {(dbSession.partsNeeded as string[]).map((p: string, i: number) => (
               <span key={i} className="text-xs bg-ink-800 text-ink-300 px-3 py-1 rounded-full">{p}</span>
             ))}
           </div>
@@ -129,7 +129,7 @@ export default async function SessionSummaryPage({ params }: { params: { id: str
 
       {/* Leave a review */}
       {session.status === 'completed' && !review && (
-        <ReviewForm sessionId={params.id} revieweeId={session.expert_id} />
+        <ReviewForm sessionId={params.id} revieweeId={dbSession.expertId!} />
       )}
       {review && (
         <div className="card p-5">

@@ -2,19 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 type Step = 'category' | 'describe' | 'photos' | 'confirm' | 'booking'
 
 interface Category { id: string; name: string; icon: string; slug: string; fee_type: string; fee_value: number; fee_flat_tiers?: Record<string,number>; rate_min: number; rate_max: number }
-interface Expert   { id: string; full_name: string; hourly_rate: number; rating_avg: number; rating_count: number; bio: string }
+interface Expert   { id: string; name: string; hourlyRate: number; ratingAvg: number; ratingCount: number; bio: string }
 interface SavedCard { id: string; brand: string; last4: string; expMonth: number; expYear: number; isDefault: boolean }
 
 export default function BookPage() {
   const router   = useRouter()
   const params   = useSearchParams()
-  const supabase = createClient()
 
   const [step, setStep]         = useState<Step>('category')
   const [categories, setCategories] = useState<Category[]>([])
@@ -47,18 +45,14 @@ export default function BookPage() {
 
   useEffect(() => {
     if (!selected.category) return
-    supabase.from('expert_profiles')
-      .select('id, hourly_rate, rating_avg, rating_count, bio, profiles(full_name)')
-      .eq('status', 'approved').eq('available', true)
-      .contains('category_ids', [selected.category.id])
-      .then(({ data }) => {
-        setExperts((data ?? []).map((e: any) => ({ ...e, full_name: e.profiles?.full_name ?? 'Expert' })))
-      })
+    fetch(`/api/experts?categoryId=${selected.category.id}`)
+      .then(r => r.json())
+      .then(d => setExperts(d.experts ?? []))
   }, [selected.category])
 
   useEffect(() => {
     if (!selected.category || !selected.expert) { setPricing({ subtotal: 0, fee: 0, total: 0 }); return }
-    const sub = parseFloat((selected.expert.hourly_rate * selected.duration / 60).toFixed(2))
+    const sub = parseFloat((selected.expert.hourlyRate * selected.duration / 60).toFixed(2))
     let fee = 0
     if (selected.category.fee_type === 'percentage') {
       fee = parseFloat((sub * selected.category.fee_value).toFixed(2))
@@ -94,7 +88,7 @@ export default function BookPage() {
     const data = await res.json()
     if (!res.ok) { setError(data.error ?? 'Booking failed'); setLoading(false); return }
 
-    // Upload pre-session photos
+    // Upload pre-session photos (photo record created by upload-url API)
     if (selected.photos.length > 0) {
       await Promise.allSettled(selected.photos.map(async file => {
         const urlRes = await fetch('/api/photos/upload-url', {
@@ -102,14 +96,9 @@ export default function BookPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId: data.session.id, stage: 'pre', fileName: file.name, contentType: file.type }),
         })
-        const { uploadUrl, storagePath } = await urlRes.json()
+        const { uploadUrl } = await urlRes.json()
         if (!uploadUrl) return
         await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } })
-        await supabase.from('session_photos').insert({
-          session_id: data.session.id, uploaded_by: data.session.customer_id,
-          stage: 'pre', storage_path: storagePath, file_name: file.name,
-          file_size_bytes: file.size, mime_type: file.type,
-        })
       }))
     }
 
@@ -198,10 +187,10 @@ export default function BookPage() {
                       className={`w-full card p-4 text-left transition-all
                         ${selected.expert?.id === exp.id ? 'border-brand-500/60 bg-brand-500/5' : 'hover:border-ink-700'}`}>
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-medium text-white">{exp.full_name}</p>
-                        <p className="text-sm font-medium text-brand-400">${exp.hourly_rate}/hr</p>
+                        <p className="text-sm font-medium text-white">{exp.name}</p>
+                        <p className="text-sm font-medium text-brand-400">${exp.hourlyRate}/hr</p>
                       </div>
-                      <p className="text-xs text-ink-500">★ {exp.rating_avg?.toFixed(1) ?? '—'} ({exp.rating_count ?? 0} reviews)</p>
+                      <p className="text-xs text-ink-500">★ {exp.ratingAvg?.toFixed(1) ?? '—'} ({exp.ratingCount ?? 0} reviews)</p>
                       {exp.bio && <p className="text-xs text-ink-400 mt-1.5 line-clamp-2">{exp.bio}</p>}
                     </button>
                   ))}
@@ -257,7 +246,7 @@ export default function BookPage() {
           {/* Booking summary */}
           <div className="card p-5 space-y-2.5">
             {[
-              ['Expert',   selected.expert.full_name],
+              ['Expert',   selected.expert.name],
               ['Category', selected.category.name],
               ['Duration', selected.duration < 60 ? `${selected.duration} min` : `${selected.duration / 60} hr`],
               ['Problem',  selected.title],

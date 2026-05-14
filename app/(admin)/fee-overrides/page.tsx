@@ -1,23 +1,25 @@
-import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { auth } from '@/lib/auth'
+import { prisma } from '@/lib/db'
+import { headers } from 'next/headers'
 import FeeOverrideManager from './FeeOverrideManager'
 
 export default async function AdminFeeOverridesPage() {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const session = await auth.api.getSession({ headers: headers() })
+  if (!session) redirect('/login')
+  if (session.user.role !== 'admin') redirect('/customer/dashboard')
 
-  const { data: profile } = await supabase.from('profiles').select('role,full_name').eq('id', user.id).single()
-  if (profile?.role !== 'admin') redirect('/customer/dashboard')
+  const categories = await prisma.category.findMany({
+    where: { active: true },
+    select: { id: true, name: true, feeType: true, feeValue: true },
+    orderBy: { name: 'asc' },
+  })
 
-  const { data: categories } = await supabase
-    .from('categories').select('id, name, fee_type, fee_value').eq('active', true).order('name')
-
-  const { data: overrides } = await supabase
-    .from('fee_overrides')
-    .select('*, category:category_id(name)')
-    .gte('ends_at', new Date().toISOString())
-    .order('starts_at', { ascending: false })
+  const overrides = await prisma.feeOverride.findMany({
+    where: { endsAt: { gte: new Date() } },
+    include: { category: { select: { name: true } } },
+    orderBy: { startsAt: 'desc' },
+  })
 
   return (
     <div className="p-8 max-w-3xl">
@@ -27,7 +29,7 @@ export default async function AdminFeeOverridesPage() {
             Create temporary promotional fee reductions. Overrides apply to all new bookings in that category during the period.
           </p>
         </div>
-        <FeeOverrideManager categories={categories ?? []} overrides={overrides ?? []} />
+        <FeeOverrideManager categories={categories} overrides={overrides as any} />
     </div>
   )
 }

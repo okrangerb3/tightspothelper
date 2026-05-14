@@ -1,15 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { authClient } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 export default function CustomerProfilePage() {
-  const supabase = createClient()
-  const router   = useRouter()
+  const router = useRouter()
 
-  const [form, setForm]       = useState({ full_name: '', phone: '' })
+  const [form, setForm]       = useState({ name: '', phone: '' })
   const [email, setEmail]     = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
@@ -18,13 +17,15 @@ export default function CustomerProfilePage() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/login'); return }
-      setEmail(user.email ?? '')
+      const s = await authClient.getSession()
+      if (!s.data?.user) { router.push('/login'); return }
+      setEmail(s.data.user.email ?? '')
 
-      const { data } = await supabase
-        .from('profiles').select('full_name, phone').eq('id', user.id).single()
-      if (data) setForm({ full_name: data.full_name ?? '', phone: data.phone ?? '' })
+      const res = await fetch('/api/customer/profile')
+      if (res.ok) {
+        const { user } = await res.json()
+        setForm({ name: user.name ?? '', phone: user.phone ?? '' })
+      }
       setLoading(false)
     }
     load()
@@ -32,24 +33,24 @@ export default function CustomerProfilePage() {
 
   const save = async () => {
     setSaving(true); setError(null)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    const { error } = await supabase.from('profiles').update({
-      full_name: form.full_name.trim(),
-      phone:     form.phone.trim() || null,
-    }).eq('id', user.id)
-
-    if (error) { setError(error.message); setSaving(false); return }
+    const res = await fetch('/api/customer/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: form.name.trim(), phone: form.phone.trim() || null }),
+    })
+    if (!res.ok) {
+      const d = await res.json()
+      setError(d.error ?? 'Failed to save')
+      setSaving(false)
+      return
+    }
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
     setSaving(false)
   }
 
   const changePassword = async () => {
-    await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    })
+    await authClient.forgetPassword({ email, redirectTo: `${window.location.origin}/reset-password` })
     alert('Password reset email sent — check your inbox')
   }
 
@@ -66,8 +67,8 @@ export default function CustomerProfilePage() {
       <div className="card p-6 space-y-5 mb-4">
         <div>
           <label className="label">Full name</label>
-          <input className="input" value={form.full_name}
-            onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))}
+          <input className="input" value={form.name}
+            onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
             placeholder="Your name" />
         </div>
         <div>
