@@ -38,8 +38,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       status:              'completed',
       endedAt:             new Date(),
       durationSeconds,
-      durationBilledMins:  billedMinutes,
+      durationBilledMinutes: billedMinutes,
       expertNotes:         notes,
+      partsNeeded:         Array.isArray(parts_needed) ? parts_needed : undefined,
       paymentStatus:       'released',
     },
   })
