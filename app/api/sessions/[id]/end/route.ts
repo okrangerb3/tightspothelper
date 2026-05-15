@@ -24,7 +24,19 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (s.stripePaymentIntentId) {
     try {
-      await captureSessionPayment(s.stripePaymentIntentId)
+      const actualMins = s.durationBilledMinutes ?? Math.ceil((s.durationSeconds ?? 3600) / 60)
+      const actualPricing = calculateSessionPricing({
+        expertRatePerHour: Number(s.expertHourlyRate ?? 75),
+        durationMinutes:   actualMins,
+        feeType:           (s.platformFeeType ?? 'percentage') as any,
+        feeValue:          Number(s.platformFeeValue ?? 0.05),
+      })
+      await captureSessionPayment(
+        s.stripePaymentIntentId,
+        Math.round(actualPricing.customerTotal * 100),
+        Math.round(actualPricing.expertPayout  * 100),
+        s.expert?.stripeConnectId ?? '',
+      )
     } catch (err) {
       console.error('Payment capture failed:', err)
     }
