@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-helpers'
 import { prisma } from '@/lib/db'
-import { captureSessionPayment } from '@/lib/stripe'
+import { captureSessionPayment, calculateSessionPricing } from '@/lib/stripe'
 import { sendSessionSummary } from '@/lib/resend'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
