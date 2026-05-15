@@ -1,5 +1,5 @@
-import { betterFetch } from '@better-fetch/fetch'
 import { NextResponse, type NextRequest } from 'next/server'
+import { auth } from '@/lib/auth'
 
 const ROLE_ROUTES: Record<string, string[]> = {
   '/customer': ['customer', 'admin'],
@@ -10,13 +10,9 @@ const ROLE_ROUTES: Record<string, string[]> = {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  const { data: session } = await betterFetch<{ session: { user: { role: string } } }>(
-    '/api/auth/get-session',
-    {
-      baseURL: request.nextUrl.origin,
-      headers: { cookie: request.headers.get('cookie') ?? '' },
-    }
-  )
+  const session = await auth.api.getSession({
+    headers: request.headers,
+  })
 
   if (!session) {
     const loginUrl = new URL('/login', request.url)
@@ -24,7 +20,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  const role = session.session?.user?.role ?? 'customer'
+  const role = (session.user as any)?.role ?? 'customer'
 
   for (const [prefix, allowedRoles] of Object.entries(ROLE_ROUTES)) {
     if (pathname.startsWith(prefix) && !allowedRoles.includes(role)) {
