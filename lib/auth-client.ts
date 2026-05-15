@@ -20,3 +20,4 @@ export const forgetPassword = (authClient as any).forgetPassword as (
 export const resetPassword = (authClient as any).resetPassword as (
   options: { newPassword: string; token?: string }
 ) => Promise<{ data: unknown; error: { message?: string } | null }>
+
