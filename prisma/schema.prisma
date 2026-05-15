@@ -82,7 +82,7 @@ model AuthUser {
   zip              String?
   stripeCustomerId          String?
   notificationPreferences   NotificationPreferences?
-  categoryRequests          CategoryRequest[] @unique
+  categoryRequests          CategoryRequest[]
 
   // Relations (better-auth)
   authSessions  AuthSession[]
@@ -205,8 +205,6 @@ model ExpertProfile {
   available             Boolean      @default(true)
   rejectionReason       String?
   slug                  String?  @unique
-  headline              String?
-  publicBio             String?
   weeklySchedule        Json?
   timezone              String?  @default("America/Chicago")
   emergencyAvailable    Boolean  @default(false)
