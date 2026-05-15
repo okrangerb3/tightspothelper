@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { auth } from '@/lib/auth'
 
 const ROLE_ROUTES: Record<string, string[]> = {
   '/customer': ['customer', 'admin'],
@@ -10,24 +9,19 @@ const ROLE_ROUTES: Record<string, string[]> = {
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
-  const session = await auth.api.getSession({
-    headers: request.headers,
-  })
+  // Check for the Better Auth session cookie
+  const sessionCookie =
+    request.cookies.get('better-auth.session_token') ||
+    request.cookies.get('__Secure-better-auth.session_token')
 
-  if (!session) {
+  if (!sessionCookie) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('redirectTo', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  const role = (session.user as any)?.role ?? 'customer'
-
-  for (const [prefix, allowedRoles] of Object.entries(ROLE_ROUTES)) {
-    if (pathname.startsWith(prefix) && !allowedRoles.includes(role)) {
-      return NextResponse.redirect(new URL(`/${role}/dashboard`, request.url))
-    }
-  }
-
+  // Role enforcement happens inside each protected layout/page
+  // Middleware only gates unauthenticated users here
   return NextResponse.next()
 }
 
