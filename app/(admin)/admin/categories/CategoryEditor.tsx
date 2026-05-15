@@ -53,12 +53,14 @@ export default function CategoryEditor({ categories: initial }: { categories: Ca
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        name:           cat.name,
+        slug:           cat.slug,
+        description:    cat.description,
+        icon:           cat.icon,
         fee_type:       cat.feeType,
         fee_value:      cat.feeValue,
         fee_flat_tiers: cat.feeFlatTiers,
         active:         cat.active,
-        icon:           cat.icon,
-        description:    cat.description,
       }),
     })
     setSaving(null)
@@ -229,6 +231,43 @@ export default function CategoryEditor({ categories: initial }: { categories: Ca
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Edit name, description, icon */}
+          <div className="grid sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-ink-800/60">
+            <div>
+              <label className="label text-[10px]">Name</label>
+              <input value={cat.name} onChange={e => update(cat.id, { name: e.target.value })}
+                className="input py-1.5 text-xs" placeholder="Category name" />
+            </div>
+            <div>
+              <label className="label text-[10px]">Slug</label>
+              <input value={cat.slug} onChange={e => update(cat.id, { slug: e.target.value })}
+                className="input py-1.5 text-xs" placeholder="url-slug" />
+            </div>
+            <div>
+              <label className="label text-[10px]">Icon</label>
+              <select value={cat.icon ?? ''} onChange={e => update(cat.id, { icon: e.target.value })}
+                className="input py-1.5 text-xs">
+                <option value="">No icon</option>
+                <option value="ti-droplet">💧 Plumbing</option>
+                <option value="ti-bolt">⚡ Electrical</option>
+                <option value="ti-wind">❄️ HVAC</option>
+                <option value="ti-tool">🔧 Appliances</option>
+                <option value="ti-hammer">🔨 Handyman</option>
+                <option value="ti-car">🚗 Automotive</option>
+                <option value="ti-car">🚛 Diesel</option>
+                <option value="ti-fish">⛵ Marine</option>
+                <option value="ti-plant">🌿 Landscaping</option>
+                <option value="ti-home">🏠 General</option>
+                <option value="ti-wood">🪵 Carpenter</option>
+              </select>
+            </div>
+            <div className="sm:col-span-3">
+              <label className="label text-[10px]">Description</label>
+              <input value={cat.description ?? ''} onChange={e => update(cat.id, { description: e.target.value })}
+                className="input py-1.5 text-xs" placeholder="Short description shown to customers" />
+            </div>
           </div>
 
           {cat.feeType === 'percentage' && (
