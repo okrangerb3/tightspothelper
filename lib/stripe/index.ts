@@ -90,3 +90,32 @@ export async function refundSession(paymentIntentId: string, amountCents?: numbe
     ...(amountCents ? { amount: amountCents } : {}),
   })
 }
+
+export async function createRecordingPurchase(params: {
+  customerId:       string
+  amountCents:      number
+  recordingId:      string
+  paymentMethodId?: string
+}) {
+  const { customerId, amountCents, recordingId, paymentMethodId } = params
+  return stripe.paymentIntents.create({
+    amount:   amountCents,
+    currency: 'usd',
+    customer: customerId,
+    ...(paymentMethodId ? {
+      payment_method: paymentMethodId,
+      confirm:        true,
+      off_session:    true,
+    } : {}),
+    metadata:    { recordingId, type: 'recording_purchase' },
+    description: `TightSpotHelper recording ${recordingId}`,
+  })
+}
+
+export function verifyStripeWebhook(payload: string | Buffer, signature: string) {
+  return stripe.webhooks.constructEvent(
+    payload,
+    signature,
+    process.env.STRIPE_WEBHOOK_SECRET!,
+  )
+}

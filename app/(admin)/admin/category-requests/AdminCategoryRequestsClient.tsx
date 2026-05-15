@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 interface Request {
   id: string; categoryName: string; description: string | null
-  status: string; adminNote: string | null; createdAt: string
+  status: string; requestedBy: string; adminNote: string | null; createdAt: string
   user: { name: string | null; email: string }
 }
 
@@ -46,7 +46,7 @@ export default function AdminCategoryRequestsClient({ requests: initial }: { req
               </div>
               {r.description && <p className="text-sm text-ink-400 mb-2">{r.description}</p>}
               <p className="text-xs text-ink-600">
-                {r.user.name ?? r.user.email} · {new Date(r.createdAt).toLocaleDateString()}
+                {r.user.name ?? r.user.email} · <span className={`text-[10px] px-1.5 py-0.5 rounded-full border ml-1 ${ r.requestedBy === 'expert' ? 'bg-brand-500/10 text-brand-400 border-brand-500/20' : 'bg-ink-800 text-ink-500 border-ink-700' }`}>{r.requestedBy === 'expert' ? 'Pro request' : 'Customer request'}</span> · {new Date(r.createdAt).toLocaleDateString()}
               </p>
             </div>
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import CategoryRequestModal from '@/components/ui/CategoryRequestModal'
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tightspothelper.com'
 
@@ -63,6 +64,7 @@ export default function ExpertProfilePage() {
   const [selectedCats, setSelectedCats] = useState<string[]>([])
   const [specialties, setSpecialties]   = useState<string[]>([])
   const [newSpecialty, setNewSpecialty] = useState('')
+  const [showCatRequest, setShowCatRequest] = useState(false)
 
   // Public link
   const [slug, setSlug]     = useState<string | null>(null)
@@ -260,8 +262,13 @@ export default function ExpertProfilePage() {
                 onChange={e => setForm(f => ({ ...f, years: e.target.value }))} />
             </div>
           </div>
+          <button onClick={() => setShowCatRequest(true)}
+            className="w-full mt-2 py-2.5 rounded-xl border border-dashed border-ink-700 text-xs text-ink-500 hover:border-brand-500/50 hover:text-ink-300 transition-colors">
+            Don't see your specialty category? Request it →
+          </button>
         </div>
       )}
+      {showCatRequest && <CategoryRequestModal onClose={() => setShowCatRequest(false)} />}
 
       {/* ── SCHEDULE TAB ─────────────────────────────────────── */}
       {tab === 'schedule' && (
