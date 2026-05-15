@@ -93,3 +93,16 @@
 .stagger > *:nth-child(3) { animation-delay: 160ms; }
 .stagger > *:nth-child(4) { animation-delay: 240ms; }
 .stagger > *:nth-child(5) { animation-delay: 320ms; }
+
+/* ── Mobile optimisations ─────────────────────────────────── */
+/* Prevent iOS font size inflation */
+html { -webkit-text-size-adjust: 100%; }
+
+/* Minimum touch target size */
+button, a, [role="button"] { min-height: 44px; }
+
+/* Prevent double-tap zoom on buttons */
+button { touch-action: manipulation; }
+
+/* Safe area padding for bottom nav */
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }

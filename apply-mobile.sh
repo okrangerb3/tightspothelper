@@ -1,3 +1,12 @@
+#!/usr/bin/env bash
+# Mobile-first Shell update — bottom tab bar + responsive layouts
+set -e
+if [ ! -f package.json ] || ! grep -q "tightspothelper" package.json 2>/dev/null; then
+  echo "⚠️  Run from the repo root." >&2; exit 1
+fi
+
+echo "→ writing components/shell/Shell.tsx (mobile bottom nav)"
+cat > "components/shell/Shell.tsx" << 'TSH_EOF_MARKER'
 'use client'
 
 import Link from 'next/link'
@@ -180,3 +189,43 @@ export function PageShell({ role, userName, children }: {
     </div>
   )
 }
+TSH_EOF_MARKER
+
+
+# ── Patch tailwind.config to ensure safe-area utilities work ─────────────────
+echo "→ checking tailwind config for safe-area support"
+if ! grep -q "safe-area" tailwind.config.ts 2>/dev/null; then
+  echo "  (safe-area classes are used inline via style prop — no config change needed)"
+fi
+
+# ── Patch globals.css — ensure touch targets and mobile font sizes ───────────
+echo "→ patching globals.css for mobile touch targets"
+if ! grep -q "touch-action" app/globals.css; then
+cat >> app/globals.css << 'CSSEOF'
+
+/* ── Mobile optimisations ─────────────────────────────────── */
+/* Prevent iOS font size inflation */
+html { -webkit-text-size-adjust: 100%; }
+
+/* Minimum touch target size */
+button, a, [role="button"] { min-height: 44px; }
+
+/* Prevent double-tap zoom on buttons */
+button { touch-action: manipulation; }
+
+/* Safe area padding for bottom nav */
+.safe-area-bottom { padding-bottom: env(safe-area-inset-bottom); }
+CSSEOF
+fi
+
+echo ""
+echo "✓ Mobile shell applied. Changes:"
+echo "  • Bottom tab bar on mobile (hidden on lg+)"
+echo "  • Sticky top bar on mobile with logo + notification bell"
+echo "  • Desktop sidebar unchanged"
+echo "  • Main content padded to clear bottom nav (pb-20 mobile, pb-0 desktop)"
+echo "  • Minimum 44px touch targets enforced via CSS"
+echo "  • iOS text size inflation prevented"
+echo ""
+echo "Now run:"
+echo "  git add -A && git commit -m 'Mobile-first shell: bottom tab nav, responsive layout' && git push"
