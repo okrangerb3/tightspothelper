@@ -22,12 +22,10 @@ export default function CategoryEditor({ categories: initial }: { categories: Ca
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        fee_type:      cat.feeType,
-        fee_value:     cat.feeValue,
+        fee_type:       cat.feeType,
+        fee_value:      cat.feeValue,
         fee_flat_tiers: cat.feeFlatTiers,
-        rate_min:      cat.rateMin,
-        rate_max:      cat.rateMax,
-        active:        cat.active,
+        active:         cat.active,
       }),
     })
     setSaving(null)
@@ -58,7 +56,7 @@ export default function CategoryEditor({ categories: initial }: { categories: Ca
           <div className="grid sm:grid-cols-2 gap-4">
             {/* Fee type */}
             <div>
-              <label className="label">Fee type</label>
+              <label className="label">Platform fee type</label>
               <div className="flex gap-2">
                 {['percentage', 'flat'].map(t => (
                   <button key={t} onClick={() => update(cat.id, { feeType: t })}
@@ -73,7 +71,7 @@ export default function CategoryEditor({ categories: initial }: { categories: Ca
             {/* Fee value (percentage only) */}
             {cat.feeType === 'percentage' && (
               <div>
-                <label className="label">Percentage ({Math.round(cat.feeValue * 100)}%)</label>
+                <label className="label">Platform cut ({Math.round(cat.feeValue * 100)}%)</label>
                 <input type="range" min={0.05} max={0.50} step={0.01} value={cat.feeValue}
                   onChange={e => update(cat.id, { feeValue: parseFloat(e.target.value) })}
                   className="w-full mt-2" />
@@ -84,7 +82,7 @@ export default function CategoryEditor({ categories: initial }: { categories: Ca
             {/* Flat tier editor */}
             {cat.feeType === 'flat' && (
               <div>
-                <label className="label">Flat fee by duration</label>
+                <label className="label">Platform flat fee by duration</label>
                 <div className="grid grid-cols-4 gap-1.5">
                   {DURATION_TIERS.map(mins => (
                     <div key={mins}>
@@ -100,33 +98,24 @@ export default function CategoryEditor({ categories: initial }: { categories: Ca
                 </div>
               </div>
             )}
-
-            {/* Rate guardrails */}
-            <div>
-              <label className="label">Min expert rate ($/hr)</label>
-              <input type="number" className="input" value={cat.rateMin}
-                onChange={e => update(cat.id, { rateMin: parseFloat(e.target.value) })} />
-            </div>
-            <div>
-              <label className="label">Max expert rate ($/hr)</label>
-              <input type="number" className="input" value={cat.rateMax}
-                onChange={e => update(cat.id, { rateMax: parseFloat(e.target.value) })} />
-            </div>
           </div>
 
-          {/* Live pricing preview */}
+          {/* Live pricing preview — pros set their own rate, this shows the platform fee only */}
           {cat.feeType === 'percentage' && (
             <div className="mt-4 surface p-3 rounded-xl">
-              <p className="text-[10px] text-ink-500 mb-2">Preview at ${cat.rateMin}/hr</p>
+              <p className="text-[10px] text-ink-500 mb-2">
+                Platform fee preview (pros set their own rate)
+              </p>
               <div className="flex gap-4 text-xs">
-                {[30,60,90].map(mins => {
-                  const sub  = cat.rateMin * mins / 60
-                  const fee  = sub * cat.feeValue
+                {[30, 60, 90].map(mins => {
+                  const exampleRate = 75
+                  const sub = exampleRate * mins / 60
+                  const fee = sub * cat.feeValue
                   return (
                     <div key={mins}>
-                      <p className="text-ink-500">{mins}m</p>
-                      <p className="text-white">${(sub + fee).toFixed(2)}</p>
-                      <p className="text-ink-600">fee ${fee.toFixed(2)}</p>
+                      <p className="text-ink-500">{mins}m @ $75/hr</p>
+                      <p className="text-white">${(sub + fee).toFixed(2)} total</p>
+                      <p className="text-brand-400">fee ${fee.toFixed(2)}</p>
                     </div>
                   )
                 })}
