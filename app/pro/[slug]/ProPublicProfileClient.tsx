@@ -11,6 +11,7 @@ interface Pro {
   ratingCount: number; yearsExperience: number | null; available: boolean
   certifications: string[]; specialties: string[]; emergencyAvailable: boolean
   emergencyRate: number; slug: string
+  status: string
 }
 
 interface Props { pro: Pro; categories: Category[]; baseUrl: string }
