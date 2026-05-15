@@ -108,7 +108,7 @@ export default function BookPage() {
     router.push(`/customer/sessions/${data.session.id}`)
   }
 
-  // Duration options handled by DurationSelector component
+  const DURATIONS = [30, 45, 60, 90, 120]
 
   const defaultCard = savedCards.find(c => c.isDefault) ?? savedCards[0]
 
