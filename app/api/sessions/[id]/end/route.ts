@@ -24,6 +24,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   if (s.stripePaymentIntentId) {
     try {
+      const expertProfile = s.expertId
+        ? await prisma.expertProfile.findUnique({
+            where:  { id: s.expertId },
+            select: { stripeConnectId: true },
+          })
+        : null
+      const expertConnectId = expertProfile?.stripeConnectId ?? ''
       const actualMins = s.durationBilledMinutes ?? Math.ceil((s.durationSeconds ?? 3600) / 60)
       const actualPricing = calculateSessionPricing({
         expertRatePerHour: Number(s.expertHourlyRate ?? 75),
@@ -35,7 +42,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         s.stripePaymentIntentId,
         Math.round(actualPricing.customerTotal * 100),
         Math.round(actualPricing.expertPayout  * 100),
-        s.expert?.stripeConnectId ?? '',
+        expertConnectId,
       )
     } catch (err) {
       console.error('Payment capture failed:', err)
