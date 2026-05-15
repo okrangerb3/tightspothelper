@@ -11,11 +11,13 @@ export default async function AdminCategories() {
 
   const rawCats = await prisma.category.findMany({ orderBy: { sortOrder: 'asc' } })
   const categories = rawCats.map(c => ({
-    ...c,
+    id:           c.id,
+    name:         c.name,
+    slug:         c.slug,
+    feeType:      c.feeType,
     feeValue:     Number(c.feeValue),
-    rateMin:      Number(c.rateMin),
-    rateMax:      Number(c.rateMax),
     feeFlatTiers: c.feeFlatTiers as Record<string, number> | null,
+    active:       c.active,
   }))
 
   return (
