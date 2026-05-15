@@ -3,3 +3,6 @@ NIXPACKS_NO_CACHE = "1"
 
 [phases.install]
 cmds = ["npm install --legacy-peer-deps"]
+
+[phases.build]
+cmds = ["npx prisma generate && npm run build"]
