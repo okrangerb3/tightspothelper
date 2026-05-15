@@ -29,7 +29,7 @@ export default async function AdminProDetail({ params }: { params: { id: string 
         customer: { select: { name: true, email: true } },
         category: { select: { name: true } },
         reviews:  { select: { rating: true, comment: true, reviewerId: true } },
-        recording: { select: { id: true, purchaseStatus: true } },
+        recordings: { select: { id: true, purchaseStatus: true }, take: 1 },
       },
       orderBy: { createdAt: 'desc' },
     }),
@@ -78,7 +78,7 @@ export default async function AdminProDetail({ params }: { params: { id: string 
       problemTitle:          s.problemTitle ?? null,
       expertNotes:           s.expertNotes ?? null,
       review:                s.reviews[0] ? { rating: s.reviews[0].rating, comment: s.reviews[0].comment } : null,
-      hasRecording:          !!s.recording,
+      hasRecording:          s.recordings?.length > 0,
     })),
     categories,
   }
