@@ -74,9 +74,9 @@ export async function captureSessionPayment(
   actualPayoutCents: number,
   expertConnectId:   string,
 ) {
-  // Update transfer amount to reflect actual payout
+  // Update transfer amount only (destination cannot be changed after creation)
   await stripe.paymentIntents.update(paymentIntentId, {
-    transfer_data: { destination: expertConnectId, amount: actualPayoutCents },
+    transfer_data: { amount: actualPayoutCents },
   })
 
   return stripe.paymentIntents.capture(paymentIntentId, {
