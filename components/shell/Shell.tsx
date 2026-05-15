@@ -29,6 +29,8 @@ const NAV: Record<string, NavItem[]> = {
     { href: '/admin/categories',    label: 'Categories',  icon: '◧' },
     { href: '/admin/fee-overrides', label: 'Promos',      icon: '◐' },
     { href: '/admin/recordings',    label: 'Recordings',  icon: '◷' },
+    { href: '/admin/customers',    label: 'Customers',   icon: '◍' },
+    { href: '/admin/financials',   label: 'Financials',  icon: '◉' },
   ],
 }
 

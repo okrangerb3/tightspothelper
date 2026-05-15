@@ -75,6 +75,11 @@ model AuthUser {
   // App-specific additional fields
   role             Role    @default(customer)
   phone            String?
+  firstName        String?
+  lastName         String?
+  city             String?
+  state            String?
+  zip              String?
   stripeCustomerId String? @unique
 
   // Relations (better-auth)
@@ -197,6 +202,9 @@ model ExpertProfile {
   sessionCount          Int          @default(0)
   available             Boolean      @default(true)
   rejectionReason       String?
+  slug                  String?  @unique
+  headline              String?
+  publicBio             String?
   reviewedBy            String?
   reviewedAt            DateTime?
   createdAt             DateTime     @default(now())

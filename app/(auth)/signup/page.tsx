@@ -1,256 +1,248 @@
 'use client'
 
-import { Suspense } from 'react'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { signUp, signIn } from '@/lib/auth-client'
+import { authClient } from '@/lib/auth-client'
 
-type Role = 'customer' | 'expert'
+type Step = 'account' | 'verify' | 'billing' | 'done'
 
-const ROLES = [
-  {
-    id:       'customer' as Role,
-    emoji:    '🔧',
-    headline: 'I need help',
-    sub:      'Connect with a vetted expert over live video to diagnose and fix your problem.',
-    perks:    ['Book in minutes', 'Share photos & video', 'Pay only after the session'],
-  },
-  {
-    id:       'expert' as Role,
-    emoji:    '🛠️',
-    headline: 'I can help',
-    sub:      'Apply to become an expert. Set your own rate, work on your schedule.',
-    perks:    ['Set your own rates', 'Get paid via direct deposit', 'Build your reputation'],
-  },
+const US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
+  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
+  'VA','WA','WV','WI','WY','DC',
 ]
 
-function SignupPageContent() {
-  const router    = useRouter()
-  const params    = useSearchParams()
-
-  // Pre-select role from URL if coming from landing page CTA
-  const defaultRole = (params.get('role') as Role | null) ?? null
-  const [role, setRole]         = useState<Role | null>(defaultRole)
-  const [step, setStep]         = useState<'role' | 'details'>(defaultRole ? 'details' : 'role')
-  const [name, setName]         = useState('')
-  const [email, setEmail]       = useState('')
-  const [password, setPassword] = useState('')
+export default function SignupPage() {
+  const router = useRouter()
+  const [step, setStep]     = useState<Step>('account')
+  const [role, setRole]     = useState<'customer' | 'expert'>('customer')
   const [loading, setLoading]   = useState(false)
   const [error, setError]       = useState<string | null>(null)
 
-  const handleRoleSelect = (r: Role) => {
-    setRole(r)
-    setStep('details')
-  }
+  const [form, setForm] = useState({
+    firstName: '', lastName: '', email: '', password: '',
+    phone: '', city: '', state: '', zip: '',
+  })
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!role) return
-    setLoading(true)
-    setError(null)
+  const set = (k: keyof typeof form) =>
+    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+      setForm(f => ({ ...f, [k]: e.target.value }))
 
-    try {
-      const { error: authError } = await signUp.email({
-        email,
-        password,
-        name,
-      })
-
-      if (authError) {
-        setError(authError.message ?? 'Unable to create account. Please try again.')
-        return
-      }
-
-      router.push(role === 'expert' ? '/apply' : '/customer/dashboard')
-      router.refresh()
-    } catch (caughtError) {
-      const message = caughtError instanceof Error
-        ? caughtError.message
-        : 'Unable to create account right now. Please try again.'
-      setError(message)
-    } finally {
-      setLoading(false)
+  const handleSignup = async () => {
+    setLoading(true); setError(null)
+    if (!form.firstName || !form.email || !form.password) {
+      setError('Please fill in all required fields'); setLoading(false); return
     }
+    if (form.password.length < 8) {
+      setError('Password must be at least 8 characters'); setLoading(false); return
+    }
+
+    const name = [form.firstName, form.lastName].filter(Boolean).join(' ')
+    const res  = await authClient.signUp.email({
+      email:    form.email,
+      password: form.password,
+      name,
+      callbackURL: '/customer/dashboard',
+    })
+
+    if (res.error) { setError(res.error.message ?? 'Signup failed'); setLoading(false); return }
+
+    // Save extended profile fields
+    await fetch('/api/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        firstName: form.firstName, lastName: form.lastName,
+        phone: form.phone, city: form.city, state: form.state, zip: form.zip,
+      }),
+    })
+
+    setStep('verify')
+    setLoading(false)
   }
 
-  const handleOAuth = async (provider: 'google' | 'apple') => {
-    if (!role) return
-    await signIn.social({
-      provider,
-      callbackURL: role === 'expert' ? '/apply' : '/customer/dashboard',
+  const handleResendVerification = async () => {
+    setLoading(true)
+    await fetch('/api/auth/resend-verification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: form.email }),
     })
+    setLoading(false)
+  }
+
+  const handleSkipToBilling = () => setStep('billing')
+
+  const handleSetupBilling = async () => {
+    router.push('/customer/payment-methods?onboarding=1')
   }
 
   return (
-    <div className="w-full animate-fade-up">
-      {step === 'role' ? (
-        /* ── Step 1: Role picker ─────────────────────── */
-        <div className="max-w-2xl mx-auto">
-          <div className="text-center mb-10">
-            <h1 className="font-display text-4xl font-bold text-white mb-3">
-              How can we help?
-            </h1>
-            <p className="text-ink-400">Choose your role to get started</p>
-          </div>
+    <div className="min-h-screen bg-ink-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            {ROLES.map(r => (
-              <button
-                key={r.id}
-                onClick={() => handleRoleSelect(r.id)}
-                className="card p-6 text-left hover:border-brand-500/50 hover:bg-ink-800 transition-all duration-200 group"
-              >
-                <div className="text-4xl mb-4">{r.emoji}</div>
-                <h2 className="font-display text-xl font-bold text-white mb-2 group-hover:text-brand-400 transition-colors">
-                  {r.headline}
-                </h2>
-                <p className="text-ink-400 text-sm mb-5 leading-relaxed">{r.sub}</p>
-                <ul className="space-y-2">
-                  {r.perks.map(perk => (
-                    <li key={perk} className="flex items-center gap-2 text-xs text-ink-300">
-                      <span className="w-4 h-4 rounded-full bg-brand-500/20 flex items-center justify-center flex-shrink-0">
-                        <span className="text-brand-400 text-[10px]">✓</span>
-                      </span>
-                      {perk}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-5 text-xs font-medium text-brand-400 group-hover:text-brand-300 transition-colors flex items-center gap-1">
-                  Get started <span>→</span>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          <p className="text-center text-ink-500 text-sm mt-6">
-            Already have an account?{' '}
-            <Link href="/login" className="text-brand-400 hover:text-brand-300 transition-colors">Sign in</Link>
-          </p>
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <Link href="/" className="font-display font-bold text-white text-xl">
+            TightSpot<span className="text-brand-500">Helper</span>
+          </Link>
         </div>
-      ) : (
-        /* ── Step 2: Account details ─────────────────── */
-        <div className="max-w-sm mx-auto">
-          <button
-            onClick={() => setStep('role')}
-            className="flex items-center gap-1.5 text-ink-400 hover:text-ink-200 text-sm mb-6 transition-colors"
-          >
-            ← Back
-          </button>
 
-          <div className="text-center mb-8">
-            <div className="text-3xl mb-3">{ROLES.find(r => r.id === role)?.emoji}</div>
-            <h1 className="font-display text-2xl font-bold text-white mb-1">
-              {role === 'customer' ? 'Create your account' : 'Apply as an expert'}
-            </h1>
-            <p className="text-ink-400 text-sm">
-              {role === 'customer'
-                ? 'Get help in minutes'
-                : 'We\'ll review your application after signup'}
+        {/* Steps indicator */}
+        <div className="flex items-center gap-2 mb-8">
+          {(['account', 'verify', 'billing'] as Step[]).map((s, i) => (
+            <div key={s} className="flex items-center gap-2 flex-1">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+                ${step === s || (step === 'done' && i < 3)
+                  ? 'bg-brand-500 text-white'
+                  : ['account','verify','billing'].indexOf(step) > i
+                    ? 'bg-green-500 text-white'
+                    : 'bg-ink-800 text-ink-500'}`}>
+                {['account','verify','billing'].indexOf(step) > i ? '✓' : i + 1}
+              </div>
+              <span className={`text-xs ${step === s ? 'text-white' : 'text-ink-600'} hidden sm:block`}>
+                {s.charAt(0).toUpperCase() + s.slice(1)}
+              </span>
+              {i < 2 && <div className="flex-1 h-px bg-ink-800" />}
+            </div>
+          ))}
+        </div>
+
+        {/* Step 1: Account */}
+        {step === 'account' && (
+          <div className="card p-6 space-y-4">
+            <h1 className="font-display text-xl font-bold text-white">Create your account</h1>
+
+            {/* Role picker */}
+            <div className="grid grid-cols-2 gap-2">
+              {(['customer', 'expert'] as const).map(r => (
+                <button key={r} onClick={() => setRole(r)}
+                  className={`py-2.5 rounded-lg border text-sm font-medium transition-colors
+                    ${role === r
+                      ? 'border-brand-500 bg-brand-500/10 text-brand-400'
+                      : 'border-ink-700 text-ink-400 hover:border-ink-600'}`}>
+                  {r === 'customer' ? '🏠 Get help' : '🛠️ Be an expert'}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-ink-400 mb-1.5">First name *</label>
+                <input value={form.firstName} onChange={set('firstName')}
+                  className="input w-full" placeholder="Jane" autoFocus />
+              </div>
+              <div>
+                <label className="block text-xs text-ink-400 mb-1.5">Last name</label>
+                <input value={form.lastName} onChange={set('lastName')}
+                  className="input w-full" placeholder="Smith" />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-ink-400 mb-1.5">Email address (your username) *</label>
+              <input value={form.email} onChange={set('email')} type="email"
+                className="input w-full" placeholder="jane@example.com" />
+            </div>
+
+            <div>
+              <label className="block text-xs text-ink-400 mb-1.5">Password *</label>
+              <input value={form.password} onChange={set('password')} type="password"
+                className="input w-full" placeholder="Min. 8 characters" />
+            </div>
+
+            <div>
+              <label className="block text-xs text-ink-400 mb-1.5">Phone number</label>
+              <input value={form.phone} onChange={set('phone')} type="tel"
+                className="input w-full" placeholder="+1 (555) 000-0000" />
+            </div>
+
+            <div>
+              <label className="block text-xs text-ink-400 mb-1.5">City</label>
+              <input value={form.city} onChange={set('city')}
+                className="input w-full" placeholder="Houston" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-ink-400 mb-1.5">State</label>
+                <select value={form.state} onChange={set('state')} className="input w-full">
+                  <option value="">State</option>
+                  {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-ink-400 mb-1.5">ZIP code</label>
+                <input value={form.zip} onChange={set('zip')}
+                  className="input w-full" placeholder="77001" maxLength={10} />
+              </div>
+            </div>
+
+            {error && <p className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">{error}</p>}
+
+            <button onClick={handleSignup} disabled={loading} className="btn-primary w-full">
+              {loading ? 'Creating account…' : 'Create account →'}
+            </button>
+
+            <p className="text-center text-xs text-ink-500">
+              Already have an account?{' '}
+              <Link href="/login" className="text-brand-400 hover:text-brand-300">Log in</Link>
             </p>
           </div>
+        )}
 
-          <div className="card p-6">
-            {/* SSO */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
-              <button onClick={() => handleOAuth('google')} className="btn-ghost py-2.5 text-sm">
-                <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Google
+        {/* Step 2: Email verification */}
+        {step === 'verify' && (
+          <div className="card p-6 text-center space-y-5">
+            <div className="text-4xl">📧</div>
+            <h2 className="font-display text-xl font-bold text-white">Check your email</h2>
+            <p className="text-sm text-ink-400">
+              We sent a verification link to <span className="text-white">{form.email}</span>.
+              Click it to verify your account and continue.
+            </p>
+            <div className="space-y-2">
+              <button onClick={handleResendVerification} disabled={loading}
+                className="btn-ghost w-full text-sm">
+                {loading ? 'Sending…' : 'Resend verification email'}
               </button>
-              <button onClick={() => handleOAuth('apple')} className="btn-ghost py-2.5 text-sm">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-                </svg>
-                Apple
+              <button onClick={handleSkipToBilling}
+                className="w-full text-xs text-ink-600 hover:text-ink-400 transition-colors py-2">
+                Skip for now — set up billing
               </button>
             </div>
-
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex-1 h-px bg-ink-700" />
-              <span className="text-xs text-ink-500">or with email</span>
-              <div className="flex-1 h-px bg-ink-700" />
-            </div>
-
-            <form onSubmit={handleSignup} className="space-y-4">
-              <div>
-                <label className="label">Full name</label>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="input"
-                  placeholder="Jane Smith"
-                  required
-                  autoComplete="name"
-                />
-              </div>
-              <div>
-                <label className="label">Email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="input"
-                  placeholder="you@example.com"
-                  required
-                  autoComplete="email"
-                />
-              </div>
-              <div>
-                <label className="label">Password</label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="input"
-                  placeholder="Min. 8 characters"
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                />
-              </div>
-
-              {error && (
-                <p className="text-xs text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
-                  {error}
-                </p>
-              )}
-
-              <button type="submit" disabled={loading} className="btn-primary w-full py-3">
-                {loading
-                  ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  : role === 'expert' ? 'Start my application' : 'Create account'
-                }
-              </button>
-
-              <p className="text-xs text-ink-500 text-center leading-relaxed">
-                By signing up you agree to our{' '}
-                <Link href="/terms" className="text-ink-300 hover:text-white transition-colors">Terms</Link>
-                {' '}and{' '}
-                <Link href="/privacy" className="text-ink-300 hover:text-white transition-colors">Privacy Policy</Link>
-              </p>
-            </form>
           </div>
+        )}
 
-          <p className="text-center text-ink-500 text-sm mt-5">
-            Already have an account?{' '}
-            <Link href="/login" className="text-brand-400 hover:text-brand-300 transition-colors">Sign in</Link>
-          </p>
-        </div>
-      )}
+        {/* Step 3: Billing */}
+        {step === 'billing' && (
+          <div className="card p-6 space-y-5">
+            <div className="text-3xl">💳</div>
+            <h2 className="font-display text-xl font-bold text-white">Set up billing</h2>
+            <p className="text-sm text-ink-400">
+              Add a payment method so you're ready to book sessions instantly.
+              We accept credit cards, Apple Pay, and Google Pay.
+            </p>
+            <div className="flex gap-3 text-2xl justify-center py-2">
+              <span title="Visa">💳</span>
+              <span title="Apple Pay">🍎</span>
+              <span title="Google Pay">G</span>
+            </div>
+            <p className="text-xs text-ink-600 text-center">
+              Secured by Stripe — your card details are never stored on our servers
+            </p>
+            <button onClick={handleSetupBilling} className="btn-primary w-full">
+              Add payment method →
+            </button>
+            <button onClick={() => router.push('/customer/dashboard')}
+              className="w-full text-xs text-ink-600 hover:text-ink-400 transition-colors py-2">
+              Skip — I'll add billing later
+            </button>
+          </div>
+        )}
+
+      </div>
     </div>
-  )
-}
-
-export default function SignupPage() {
-  return (
-    <Suspense>
-      <SignupPageContent />
-    </Suspense>
   )
 }
