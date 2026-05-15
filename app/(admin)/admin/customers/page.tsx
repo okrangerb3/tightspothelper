@@ -4,6 +4,8 @@ import { headers } from 'next/headers'
 import { prisma } from '@/lib/db'
 import AdminCustomersClient from './AdminCustomersClient'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 export const metadata = { title: 'Customers — TightSpotHelper Admin' }
 
 export default async function AdminCustomers({
