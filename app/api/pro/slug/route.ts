@@ -30,7 +30,8 @@ export async function GET(_req: NextRequest) {
     select: { slug: true },
   })
   if (!profile) return NextResponse.json({ error: 'Profile not found' }, { status: 404 })
-  return NextResponse.json({ slug: profile.slug })
+  // Return ID as fallback slug so public link always works
+  return NextResponse.json({ slug: profile.slug ?? session.user.id })
 }
 
 // POST — generate or set a custom slug
@@ -56,4 +57,6 @@ export async function POST(req: NextRequest) {
   })
 
   return NextResponse.json({ slug: profile.slug })
+
+// Always return current slug or ID as fallback
 }

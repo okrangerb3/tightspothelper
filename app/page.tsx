@@ -5,14 +5,14 @@ import { redirect } from 'next/navigation'
 import { Logo } from '@/components/ui/Logo'
 
 const CATEGORIES = [
-  { icon: '🔧', name: 'Plumbing',    desc: 'Leaks, clogs & water damage' },
-  { icon: '⚡', name: 'Electrical',  desc: 'Outlets, breakers & wiring' },
-  { icon: '❄️', name: 'HVAC',        desc: 'AC, heat & air quality' },
-  { icon: '🏠', name: 'Appliances',  desc: 'Washers, dryers & fridges' },
-  { icon: '🪚', name: 'Carpentry',   desc: 'Doors, trim & woodwork' },
-  { icon: '🔨', name: 'Handyman',    desc: 'Odd jobs & general repairs' },
-  { icon: '🚗', name: 'Automotive',  desc: 'Engine, brakes & diagnostics' },
-  { icon: '⛵', name: 'Marine',      desc: 'Boats, motors & onboard systems' },
+  { name: 'Automotive Mechanic', icon: '🚗', desc: 'Car diagnosis & repair' },
+  { name: 'Diesel Mechanic',     icon: '🚛', desc: 'Diesel engine experts' },
+  { name: 'Marine Mechanic',     icon: '⛵', desc: 'Boat & engine repair' },
+  { name: 'Plumbing',            icon: '🔧', desc: 'Leaks, drains & fixtures' },
+  { name: 'Electrical',          icon: '⚡', desc: 'Wiring, panels & outlets' },
+  { name: 'HVAC',                icon: '❄️', desc: 'Heating, cooling & air' },
+  { name: 'Handyman',            icon: '🔨', desc: 'General home repairs' },
+  { name: 'Carpenter',           icon: '🪵', desc: 'Wood, decks & trim' },
 ]
 
 const STEPS = [
@@ -77,11 +77,11 @@ export default async function LandingPage() {
       </section>
 
       {/* ── Categories ──────────────────────────────────── */}
-      <section className="container-page pb-20">
+      <section className="container-page pb-20 flex flex-col items-center">
         <p className="text-xs font-medium text-ink-500 tracking-widest uppercase mb-6 text-center">
           What do you need help with?
         </p>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 w-full gap-3">
           {CATEGORIES.map((cat, i) => (
             <Link
               key={cat.name}

@@ -40,6 +40,13 @@ export default function ProPublicProfileClient({ pro, categories, baseUrl }: Pro
         </div>
       </nav>
 
+      {pro.status !== 'approved' && (
+        <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-3 text-center">
+          <p className="text-xs text-yellow-400">
+            👁 Preview — this profile is only visible to you until approved by TightSpotHelper
+          </p>
+        </div>
+      )}
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-4">
 
         {/* Hero card */}

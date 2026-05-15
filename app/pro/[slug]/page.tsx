@@ -8,10 +8,22 @@ const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://tightspothelper.com
 interface Props { params: { slug: string } }
 
 async function getPro(slug: string) {
-  return prisma.expertProfile.findUnique({
+  // Try slug first, then fall back to ID (for pros who haven't set a custom slug)
+  const bySlug = await prisma.expertProfile.findFirst({
     where:   { slug },
     include: { user: { select: { name: true, image: true, email: true } } },
   })
+  if (bySlug) return bySlug
+
+  // Fallback: check if slug looks like a UUID and find by ID
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (uuidPattern.test(slug)) {
+    return prisma.expertProfile.findUnique({
+      where:   { id: slug },
+      include: { user: { select: { name: true, image: true, email: true } } },
+    })
+  }
+  return null
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -32,7 +44,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ProPublicProfile({ params }: Props) {
   const pro = await getPro(params.slug)
-  if (!pro || pro.status !== 'approved') notFound()
+  if (!pro) notFound()
 
   const categories = pro.categoryIds.length
     ? await prisma.category.findMany({
@@ -59,6 +71,7 @@ export default async function ProPublicProfile({ params }: Props) {
         emergencyAvailable: (pro as any).emergencyAvailable ?? false,
         emergencyRate:   Number((pro as any).emergencyRate ?? 0),
         slug:            (pro as any).slug ?? params.slug,
+        status:          pro.status,
       }}
       categories={categories}
       baseUrl={BASE_URL}
