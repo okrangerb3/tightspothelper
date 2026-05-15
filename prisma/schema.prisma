@@ -80,7 +80,8 @@ model AuthUser {
   city             String?
   state            String?
   zip              String?
-  stripeCustomerId String? @unique
+  stripeCustomerId          String?
+  notificationPreferences   NotificationPreferences? @unique
 
   // Relations (better-auth)
   authSessions  AuthSession[]
@@ -364,3 +365,27 @@ model Notification {
 }
 
 
+
+model NotificationPreferences {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailSessionConfirm  Boolean  @default(true)
+  emailSessionReminder Boolean  @default(true)
+  emailSessionSummary  Boolean  @default(true)
+  emailNewBooking      Boolean  @default(true)
+  emailPayoutReleased  Boolean  @default(true)
+  emailRecordingReady  Boolean  @default(true)
+  emailRecordingExpiry Boolean  @default(true)
+  emailMarketing       Boolean  @default(false)
+  pushSessionAlert     Boolean  @default(true)
+  pushNewBooking       Boolean  @default(true)
+  pushEmergencyRequest Boolean  @default(true)
+  pushPayoutReleased   Boolean  @default(true)
+  adminOverrideEmail   Boolean?
+  adminOverridePush    Boolean?
+  adminNote            String?
+  updatedAt            DateTime @default(now())
+
+  @@map("notification_preferences")
+}

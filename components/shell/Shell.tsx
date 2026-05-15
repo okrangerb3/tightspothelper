@@ -14,6 +14,7 @@ const NAV: Record<string, NavItem[]> = {
     { href: '/customer/sessions',        label: 'Sessions', icon: '▤' },
     { href: '/customer/payment-methods', label: 'Billing',  icon: '◎' },
     { href: '/customer/profile',         label: 'Profile',  icon: '◉' },
+    { href: '/customer/notifications',   label: 'Alerts',   icon: '◎' },
   ],
   expert: [
     { href: '/expert/dashboard', label: 'Home',     icon: '◈' },
