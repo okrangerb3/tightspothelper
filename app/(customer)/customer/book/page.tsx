@@ -142,7 +142,7 @@ export default function BookPage() {
                 onClick={() => { setSelected(s => ({ ...s, category: cat })); setStep('describe') }}
                 className="card p-4 text-left hover:border-brand-500/40 transition-all group">
                 <p className="text-sm font-medium text-white group-hover:text-brand-400 transition-colors">{cat.name}</p>
-                <p className="text-xs text-ink-500 mt-0.5">${cat.rate_min}–${cat.rate_max}/hr</p>
+                <p className="text-xs text-ink-500 mt-0.5">${(cat as any).rateMin ?? (cat as any).rate_min ?? '—'}/hr+</p>
               </button>
             ))}
           </div>
@@ -208,7 +208,7 @@ export default function BookPage() {
 
           <div className="flex gap-3">
             <button onClick={() => setStep('category')} className="btn-ghost">← Back</button>
-            <button onClick={() => setStep('photos')} disabled={!selected.title || !selected.desc || !selected.expert}
+            <button onClick={() => setStep('photos')} disabled={!selected.title || !selected.desc}
               className="btn-primary flex-1">Continue</button>
           </div>
         </div>
