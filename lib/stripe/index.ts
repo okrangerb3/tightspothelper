@@ -5,13 +5,12 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   typescript: true,
 })
 
-/** Calculate the session total and fee for a booking */
 export function calculateSessionPricing(params: {
   expertRatePerHour: number
-  durationMinutes: number
-  feeType: 'percentage' | 'flat'
-  feeValue: number
-  flatTiers?: Record<string, number>
+  durationMinutes:   number
+  feeType:           'percentage' | 'flat'
+  feeValue:          number
+  flatTiers?:        Record<string, number>
 }) {
   const { expertRatePerHour, durationMinutes, feeType, feeValue, flatTiers } = params
   const subtotal = parseFloat((expertRatePerHour * (durationMinutes / 60)).toFixed(2))
@@ -20,10 +19,9 @@ export function calculateSessionPricing(params: {
   if (feeType === 'percentage') {
     platformFee = parseFloat((subtotal * feeValue).toFixed(2))
   } else {
-    // Find the closest duration tier (round up to next tier)
     const tierMinutes = [15, 30, 45, 60, 75, 90, 105, 120]
-    const tier = tierMinutes.find(t => t >= durationMinutes) ?? 120
-    platformFee = flatTiers?.[String(tier)] ?? feeValue
+    const tier        = tierMinutes.find(t => t >= durationMinutes) ?? 120
+    platformFee       = flatTiers?.[String(tier)] ?? feeValue
   }
 
   const customerTotal = parseFloat((subtotal + platformFee).toFixed(2))
@@ -32,94 +30,63 @@ export function calculateSessionPricing(params: {
   return { subtotal, platformFee, customerTotal, expertPayout }
 }
 
-/** Create a PaymentIntent with amount held until session completes */
+/**
+ * Pre-auth for 1 hour of the expert's rate (+ fee).
+ * We always hold a full hour regardless of selected duration —
+ * then settle at actual time used when the session ends.
+ */
 export async function createSessionPaymentIntent(params: {
-  customerId: string          // Stripe customer ID
-  expertConnectId: string     // Stripe Connect account ID
-  amountCents: number         // Customer total in cents
-  payoutCents: number         // Expert payout in cents
-  sessionId: string
+  customerId:      string
+  expertConnectId: string
+  preAuthCents:    number   // 1-hour pre-auth amount
+  payoutCents:     number   // estimated payout (1hr)
+  sessionId:       string
   paymentMethodId?: string
 }) {
-  const { customerId, expertConnectId, amountCents, payoutCents, sessionId, paymentMethodId } = params
+  const { customerId, expertConnectId, preAuthCents, payoutCents, sessionId, paymentMethodId } = params
 
   return stripe.paymentIntents.create({
-    amount: amountCents,
-    currency: 'usd',
-    customer: customerId,
-    capture_method: 'manual',        // Hold funds — capture after session
+    amount:         preAuthCents,
+    currency:       'usd',
+    customer:       customerId,
+    capture_method: 'manual',       // hold only — capture at session end with actual amount
     transfer_data: {
       destination: expertConnectId,
-      amount: payoutCents,
+      amount:      payoutCents,
     },
-    ...(paymentMethodId
-      ? {
-          payment_method: paymentMethodId,
-          confirm: true,
-          off_session: true,
-        }
-      : {}),
-    metadata: { sessionId },
-    description: `TightSpotHelper session ${sessionId}`,
+    ...(paymentMethodId ? {
+      payment_method: paymentMethodId,
+      confirm:        true,
+      off_session:    true,
+    } : {}),
+    metadata: { sessionId, preAuth: 'true' },
+    description: `TightSpotHelper session ${sessionId} — pre-auth`,
   })
 }
 
-/** Capture held payment after session completes */
-export async function captureSessionPayment(paymentIntentId: string) {
-  return stripe.paymentIntents.capture(paymentIntentId)
+/**
+ * Capture the actual amount used — called when session ends.
+ * Stripe allows capturing less than the authorized amount.
+ */
+export async function captureSessionPayment(
+  paymentIntentId: string,
+  actualAmountCents: number,
+  actualPayoutCents: number,
+  expertConnectId:   string,
+) {
+  // Update transfer amount to reflect actual payout
+  await stripe.paymentIntents.update(paymentIntentId, {
+    transfer_data: { destination: expertConnectId, amount: actualPayoutCents },
+  })
+
+  return stripe.paymentIntents.capture(paymentIntentId, {
+    amount_to_capture: actualAmountCents,
+  })
 }
 
-/** Refund a completed session (dispute resolution) */
 export async function refundSession(paymentIntentId: string, amountCents?: number) {
   return stripe.refunds.create({
     payment_intent: paymentIntentId,
     ...(amountCents ? { amount: amountCents } : {}),
-  })
-}
-
-/** Create a storage subscription */
-export const STORAGE_PRICES = {
-  basic:     process.env.STRIPE_PRICE_STORAGE_BASIC!,
-  pro:       process.env.STRIPE_PRICE_STORAGE_PRO!,
-  unlimited: process.env.STRIPE_PRICE_STORAGE_UNLIMITED!,
-} as const
-
-export async function createStorageSubscription(customerId: string, tier: keyof typeof STORAGE_PRICES) {
-  return stripe.subscriptions.create({
-    customer: customerId,
-    items: [{ price: STORAGE_PRICES[tier] }],
-    payment_behavior: 'default_incomplete',
-    expand: ['latest_invoice.payment_intent'],
-  })
-}
-
-/** One-time recording purchase */
-export async function createRecordingPurchase(params: {
-  customerId: string
-  amountCents: number
-  sessionId: string
-  recordingId: string
-}) {
-  return stripe.paymentIntents.create({
-    amount: params.amountCents,
-    currency: 'usd',
-    customer: params.customerId,
-    metadata: { sessionId: params.sessionId, recordingId: params.recordingId, type: 'recording' },
-    description: `Recording — session ${params.sessionId}`,
-  })
-}
-
-/** Verify Stripe webhook signature */
-export function verifyStripeWebhook(payload: string | Buffer, signature: string) {
-  return stripe.webhooks.constructEvent(payload, signature, process.env.STRIPE_WEBHOOK_SECRET!)
-}
-
-/** Create Stripe Connect onboarding link */
-export async function createConnectOnboardingLink(accountId: string) {
-  return stripe.accountLinks.create({
-    account: accountId,
-    refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/apply/connect/refresh`,
-    return_url:  `${process.env.NEXT_PUBLIC_APP_URL}/apply/connect/complete`,
-    type: 'account_onboarding',
   })
 }

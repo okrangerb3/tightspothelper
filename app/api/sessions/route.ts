@@ -102,11 +102,21 @@ export async function POST(req: NextRequest) {
 
   const sessionId = crypto.randomUUID()
 
+  // Pre-auth for 1 full hour regardless of selected duration
+  // We settle for actual time used when the session ends
+  const preAuthPricing = calculateSessionPricing({
+    expertRatePerHour: Number(expert.hourlyRate!),
+    durationMinutes:   60,
+    feeType:           category.feeType as any,
+    feeValue,
+    flatTiers:         category.feeFlatTiers as any ?? undefined,
+  })
+
   const paymentIntent = await createSessionPaymentIntent({
     customerId:      stripeCustomerId,
     expertConnectId: expert.stripeConnectId,
-    amountCents:     Math.round(pricing.customerTotal * 100),
-    payoutCents:     Math.round(pricing.expertPayout  * 100),
+    preAuthCents:    Math.round(preAuthPricing.customerTotal * 100),
+    payoutCents:     Math.round(preAuthPricing.expertPayout  * 100),
     sessionId,
     paymentMethodId: paymentMethod.id,
   })

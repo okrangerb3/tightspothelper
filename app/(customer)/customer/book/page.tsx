@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { DurationSelector } from '@/components/booking/DurationSelector'
 
 type Step = 'category' | 'describe' | 'photos' | 'confirm' | 'booking'
 
@@ -105,7 +106,7 @@ export default function BookPage() {
     router.push(`/customer/sessions/${data.session.id}`)
   }
 
-  const DURATIONS = [15, 30, 45, 60, 90, 120]
+  // Duration options handled by DurationSelector component
 
   const defaultCard = savedCards.find(c => c.isDefault) ?? savedCards[0]
 
