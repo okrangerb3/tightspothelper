@@ -60,7 +60,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const pi = await createRecordingPurchase({
     customerId:  user.stripeCustomerId,
     amountCents,
-    sessionId:   rec.sessionId,
     recordingId: rec.id,
   })
 
