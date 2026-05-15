@@ -81,6 +81,8 @@ model AuthUser {
   state            String?
   zip              String?
   stripeCustomerId          String?
+  banned                    Boolean  @default(false)
+  banReason                 String?
   notificationPreferences   NotificationPreferences?
   categoryRequests          CategoryRequest[]
 

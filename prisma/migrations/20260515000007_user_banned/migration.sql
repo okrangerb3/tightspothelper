@@ -1,0 +1,3 @@
+ALTER TABLE "auth_users"
+  ADD COLUMN IF NOT EXISTS "banned"    BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "banReason" TEXT;
