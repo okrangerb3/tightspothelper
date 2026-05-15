@@ -29,7 +29,7 @@ export default async function AdminCustomerDetail({ params }: { params: { id: st
         expert:   { select: { name: true } },
         category: { select: { name: true } },
         reviews:  { select: { rating: true, comment: true } },
-        recording: { select: { id: true, purchaseStatus: true, expiresAt: true } },
+        recordings: { select: { id: true, purchaseStatus: true, expiresAt: true }, take: 1 },
       },
       orderBy: { createdAt: 'desc' },
     }),
@@ -66,9 +66,9 @@ export default async function AdminCustomerDetail({ params }: { params: { id: st
         rating:  s.reviews[0].rating,
         comment: s.reviews[0].comment,
       } : null,
-      recording: s.recording ? {
+      recording: s.recordings?.[0] ? {
         id:             s.recording.id,
-        purchaseStatus: s.recording.purchaseStatus,
+        purchaseStatus: s.recordings[0].purchaseStatus,
         expiresAt:      s.recording.expiresAt?.toISOString() ?? null,
       } : null,
     })),
