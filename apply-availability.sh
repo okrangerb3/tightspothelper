@@ -1,3 +1,31 @@
+#!/usr/bin/env bash
+# Expert availability, emergency rates, specialties
+set -e
+if [ ! -f package.json ] || ! grep -q "tightspothelper" package.json 2>/dev/null; then
+  echo "⚠️  Run from the repo root." >&2; exit 1
+fi
+
+mkdir -p prisma/migrations/20260515000002_expert_availability
+mkdir -p app/api/expert/profile
+
+echo '→ writing migration'
+cat > 'prisma/migrations/20260515000002_expert_availability/migration.sql' << 'TSH_EOF_MARKER'
+-- Add availability schedule, emergency rates, and custom specialties to expert_profiles
+
+ALTER TABLE "expert_profiles"
+  -- Weekly schedule: {"mon":{"on":true,"start":"08:00","end":"18:00"}, "tue":{...}, ...}
+  ADD COLUMN IF NOT EXISTS "weeklySchedule"     JSONB,
+  -- Emergency settings
+  ADD COLUMN IF NOT EXISTS "emergencyAvailable" BOOLEAN NOT NULL DEFAULT false,
+  ADD COLUMN IF NOT EXISTS "emergencyRate"      DECIMAL(10,2),
+  -- Custom specialty tags the pro adds themselves (free-form strings)
+  ADD COLUMN IF NOT EXISTS "specialties"        TEXT[] DEFAULT '{}',
+  -- Timezone for their schedule
+  ADD COLUMN IF NOT EXISTS "timezone"           TEXT DEFAULT 'America/Chicago';
+TSH_EOF_MARKER
+
+echo '→ writing app/(expert)/expert/profile/page.tsx'
+cat > 'app/(expert)/expert/profile/page.tsx' << 'TSH_EOF_MARKER'
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -464,3 +492,97 @@ export default function ExpertProfilePage() {
     </div>
   )
 }
+TSH_EOF_MARKER
+
+echo '→ writing app/api/expert/profile/route.ts'
+cat > 'app/api/expert/profile/route.ts' << 'TSH_EOF_MARKER'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/api-helpers'
+import { prisma } from '@/lib/db'
+
+export async function GET(_req: NextRequest) {
+  const { session, error } = await requireAuth()
+  if (error) return error
+
+  const profile = await prisma.expertProfile.findUnique({
+    where: { id: session.user.id },
+  })
+  if (!profile) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  return NextResponse.json({
+    bio:                  profile.bio,
+    yearsExperience:      profile.yearsExperience,
+    certifications:       profile.certifications,
+    hourlyRate:           profile.hourlyRate,
+    categoryIds:          profile.categoryIds,
+    available:            profile.available,
+    weeklySchedule:       (profile as any).weeklySchedule ?? null,
+    timezone:             (profile as any).timezone ?? 'America/Chicago',
+    emergencyAvailable:   (profile as any).emergencyAvailable ?? false,
+    emergencyRate:        (profile as any).emergencyRate ?? null,
+    specialties:          (profile as any).specialties ?? [],
+    slug:                 (profile as any).slug ?? null,
+    headline:             (profile as any).headline ?? null,
+    publicBio:            (profile as any).publicBio ?? null,
+  })
+}
+
+export async function PATCH(req: NextRequest) {
+  const { session, error } = await requireAuth()
+  if (error) return error
+
+  const body = await req.json()
+  const {
+    bio, yearsExperience, certifications, hourlyRate, categoryIds,
+    available, weeklySchedule, timezone, emergencyAvailable, emergencyRate,
+    specialties, headline, publicBio,
+  } = body
+
+  await prisma.expertProfile.update({
+    where: { id: session.user.id },
+    data: {
+      ...(bio              !== undefined ? { bio }              : {}),
+      ...(yearsExperience  !== undefined ? { yearsExperience }  : {}),
+      ...(certifications   !== undefined ? { certifications }   : {}),
+      ...(hourlyRate       !== undefined ? { hourlyRate }       : {}),
+      ...(categoryIds      !== undefined ? { categoryIds }      : {}),
+      ...(available        !== undefined ? { available }        : {}),
+      // New fields stored as JSON/raw until schema is updated
+      ...(weeklySchedule   !== undefined ? { weeklySchedule }   : {}),
+      ...(timezone         !== undefined ? { timezone }         : {}),
+      ...(emergencyAvailable !== undefined ? { emergencyAvailable } : {}),
+      ...(emergencyRate    !== undefined ? { emergencyRate }    : {}),
+      ...(specialties      !== undefined ? { specialties }      : {}),
+      ...(headline         !== undefined ? { headline }         : {}),
+      ...(publicBio        !== undefined ? { publicBio }        : {}),
+    } as any,
+  })
+
+  return NextResponse.json({ ok: true })
+}
+TSH_EOF_MARKER
+
+
+# Patch prisma/schema.prisma — add new fields to ExpertProfile
+echo "→ patching prisma/schema.prisma"
+if ! grep -q "weeklySchedule" prisma/schema.prisma; then
+python3 - << 'PYEOF'
+schema = open('prisma/schema.prisma').read()
+insert_after = '  slug                  String?  @unique'
+new_fields = '''  slug                  String?  @unique
+  headline              String?
+  publicBio             String?
+  weeklySchedule        Json?
+  timezone              String?  @default("America/Chicago")
+  emergencyAvailable    Boolean  @default(false)
+  emergencyRate         Decimal? @db.Decimal(10, 2)
+  specialties           String[]'''
+schema = schema.replace(insert_after, new_fields, 1)
+open('prisma/schema.prisma', 'w').write(schema)
+print("  schema patched with availability fields")
+PYEOF
+fi
+
+echo ""
+echo "✓ Applied. Now run:"
+echo "  git add -A && git commit -m 'Expert availability, emergency rates, specialties' && git push"

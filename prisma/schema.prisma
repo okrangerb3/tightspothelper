@@ -205,6 +205,13 @@ model ExpertProfile {
   slug                  String?  @unique
   headline              String?
   publicBio             String?
+  weeklySchedule        Json?
+  timezone              String?  @default("America/Chicago")
+  emergencyAvailable    Boolean  @default(false)
+  emergencyRate         Decimal? @db.Decimal(10, 2)
+  specialties           String[]
+  headline              String?
+  publicBio             String?
   reviewedBy            String?
   reviewedAt            DateTime?
   createdAt             DateTime     @default(now())
