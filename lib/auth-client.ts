@@ -21,3 +21,4 @@ export const resetPassword = (authClient as any).resetPassword as (
   options: { newPassword: string; token?: string }
 ) => Promise<{ data: unknown; error: { message?: string } | null }>
 
+// Fri May 15 08:04:17 CDT 2026
