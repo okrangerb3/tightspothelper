@@ -81,7 +81,8 @@ model AuthUser {
   state            String?
   zip              String?
   stripeCustomerId          String?
-  notificationPreferences   NotificationPreferences? @unique
+  notificationPreferences   NotificationPreferences?
+  categoryRequests          CategoryRequest[] @unique
 
   // Relations (better-auth)
   authSessions  AuthSession[]
@@ -388,4 +389,18 @@ model NotificationPreferences {
   updatedAt            DateTime @default(now())
 
   @@map("notification_preferences")
+}
+
+model CategoryRequest {
+  id           String   @id @default(uuid())
+  userId       String
+  user         AuthUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryName String
+  description  String?
+  status       String   @default("pending")
+  adminNote    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("category_requests")
 }

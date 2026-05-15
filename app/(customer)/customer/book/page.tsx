@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import CategoryRequestModal from '@/components/ui/CategoryRequestModal'
 import { DurationSelector } from '@/components/booking/DurationSelector'
 
 type Step = 'category' | 'describe' | 'photos' | 'confirm' | 'booking'
@@ -15,6 +16,7 @@ export default function BookPage() {
   const router   = useRouter()
   const params   = useSearchParams()
 
+  const [showCategoryRequest, setShowCategoryRequest] = useState(false)
   const [step, setStep]         = useState<Step>('category')
   const [categories, setCategories] = useState<Category[]>([])
   const [experts, setExperts]   = useState<Expert[]>([])
@@ -148,6 +150,10 @@ export default function BookPage() {
       )}
 
       {/* STEP: Describe */}
+      {showCategoryRequest && (
+        <CategoryRequestModal onClose={() => setShowCategoryRequest(false)} />
+      )}
+
       {step === 'describe' && (
         <div className="animate-fade-up space-y-5">
           <h1 className="font-display text-2xl font-bold text-white">Describe the problem</h1>
