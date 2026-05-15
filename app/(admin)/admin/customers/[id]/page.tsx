@@ -67,9 +67,9 @@ export default async function AdminCustomerDetail({ params }: { params: { id: st
         comment: s.reviews[0].comment,
       } : null,
       recording: s.recordings?.[0] ? {
-        id:             s.recording.id,
+        id:             s.recordings[0].id,
         purchaseStatus: s.recordings[0].purchaseStatus,
-        expiresAt:      s.recording.expiresAt?.toISOString() ?? null,
+        expiresAt:      s.recordings[0].expiresAt?.toISOString() ?? null,
       } : null,
     })),
     notifications: notifications.map((n: any) => ({
