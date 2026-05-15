@@ -147,7 +147,7 @@ export default function AdminCustomersClient({ customers: initial, total, page, 
                 return (
                   <tr key={c.id} className={`hover:bg-ink-900/40 transition-colors ${c.banned ? 'opacity-50' : ''}`}>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-white">{c.name ?? '—'}</p>
+                      <a href={`/admin/customers/${c.id}`} className="font-medium text-white hover:text-brand-400 transition-colors">{c.name ?? c.email}</a>
                     </td>
                     <td className="px-4 py-3 text-ink-400 text-xs">
                       <p>{c.email}</p>

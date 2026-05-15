@@ -52,7 +52,7 @@ export default async function AdminPros({ searchParams }: { searchParams: { filt
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium text-white">{pro.user?.name ?? 'Unknown'}</p>
+                      <a href={`/admin/pros/${pro.id}`} className="text-sm font-medium text-white hover:text-brand-400 transition-colors">{pro.user?.name ?? 'Unknown'}</a>
                       <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${STATUS_STYLE[pro.status]}`}>
                         {pro.status}
                       </span>
