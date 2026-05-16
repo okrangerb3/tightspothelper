@@ -7,6 +7,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (error) return error
 
   const body = await req.json()
+  const { name, slug, description, icon, fee_type, fee_value, fee_flat_tiers, active } = body
+
   await prisma.category.update({
     where: { id: params.id },
     data: {
@@ -14,13 +16,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...(slug        !== undefined ? { slug }        : {}),
       ...(description !== undefined ? { description } : {}),
       ...(icon        !== undefined ? { icon }        : {}),
-      feeType:      body.fee_type,
-      feeValue:     body.fee_value,
-      feeFlatTiers: body.fee_flat_tiers,
-      rateMin:      body.rate_min,
-      rateMax:      body.rate_max,
-      active:       body.active,
+      ...(fee_type    !== undefined ? { feeType: fee_type } : {}),
+      ...(fee_value   !== undefined ? { feeValue: fee_value } : {}),
+      ...(fee_flat_tiers !== undefined ? { feeFlatTiers: fee_flat_tiers } : {}),
+      ...(active      !== undefined ? { active } : {}),
     },
   })
+
   return NextResponse.json({ ok: true })
 }
