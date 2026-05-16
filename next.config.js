@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir: "dist",
   generateBuildId: async () => '1778869141',
   images: {
     remotePatterns: [
