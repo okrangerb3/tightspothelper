@@ -10,8 +10,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   await prisma.category.update({
     where: { id: params.id },
     data: {
-      ...(name        ? { name }        : {}),
-      ...(slug        ? { slug }        : {}),
+      ...(name        !== undefined ? { name }        : {}),
+      ...(slug        !== undefined ? { slug }        : {}),
       ...(description !== undefined ? { description } : {}),
       ...(icon        !== undefined ? { icon }        : {}),
       feeType:      body.fee_type,
