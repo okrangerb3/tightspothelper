@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "rm -rf .next && npx prisma generate && next build",
+    "build": "npx prisma generate && next build",
     "start": "npx prisma migrate deploy && tsx server.ts",
     "lint": "next lint",
     "db:generate": "npx prisma generate",
