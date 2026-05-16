@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  distDir: "dist",
+  webpack: (config, { dev }) => {
+    config.cache = false
+    return config
+  },
   generateBuildId: async () => '1778869141',
   images: {
     remotePatterns: [
