@@ -54,8 +54,9 @@ export default function BookPage() {
   }, [selected.category])
 
   useEffect(() => {
-    if (!selected.category || !selected.expert) { setPricing({ subtotal: 0, fee: 0, total: 0 }); return }
-    const sub = parseFloat((selected.expert.hourlyRate * selected.duration / 60).toFixed(2))
+    if (!selected.category) { setPricing({ subtotal: 0, fee: 0, total: 0 }); return }
+    const rate = selected.expert?.hourlyRate ?? 75 // default rate if no expert selected
+    const sub = parseFloat((rate * selected.duration / 60).toFixed(2))
     let fee = 0
     if (selected.category.fee_type === 'percentage') {
       fee = parseFloat((sub * selected.category.fee_value).toFixed(2))
@@ -246,14 +247,14 @@ export default function BookPage() {
       )}
 
       {/* STEP: Confirm */}
-      {step === 'confirm' && selected.category && selected.expert && (
+      {step === 'confirm' && selected.category && (
         <div className="animate-fade-up space-y-4">
           <h1 className="font-display text-2xl font-bold text-white">Confirm booking</h1>
 
           {/* Booking summary */}
           <div className="card p-5 space-y-2.5">
             {[
-              ['Expert',   selected.expert.name],
+              ['Expert',   selected.expert?.name ?? 'Will be matched'],
               ['Category', selected.category.name],
               ['Duration', selected.duration < 60 ? `${selected.duration} min` : `${selected.duration / 60} hr`],
               ['Problem',  selected.title],
