@@ -4,7 +4,6 @@ const nextConfig = {
     config.cache = false
     return config
   },
-  generateBuildId: async () => '1778869141',
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '*.r2.cloudflarestorage.com' },
