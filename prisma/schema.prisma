@@ -405,3 +405,46 @@ model CategoryRequest {
 
   @@map("category_requests")
 }
+
+model ProLead {
+  id              String    @id @default(uuid())
+  businessName    String
+  phone           String
+  address         String?
+  lat             Float?
+  lng             Float?
+  googlePlaceId   String?   @unique
+  googleRating    Float?
+  categoryId      String
+  categoryName    String
+  inviteCode      String    @unique
+  source          String    @default("google_places")
+  status          String    @default("discovered")
+  discoveredById  String?
+  lastContactedAt DateTime?
+  clickedAt       DateTime?
+  registeredAt    DateTime?
+  registeredUserId String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  outreach        ProOutreach[]
+
+  @@index([categoryId])
+  @@index([status])
+  @@index([inviteCode])
+  @@map("pro_leads")
+}
+
+model ProOutreach {
+  id          String   @id @default(uuid())
+  proLeadId   String
+  proLead     ProLead  @relation(fields: [proLeadId], references: [id], onDelete: Cascade)
+  channel     String   @default("sms")
+  twilioSid   String?
+  status      String   @default("pending")
+  messageBody String?
+  error       String?
+  createdAt   DateTime @default(now())
+
+  @@map("pro_outreach")
+}

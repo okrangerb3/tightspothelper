@@ -60,6 +60,14 @@ export default function SignupPage() {
     })
 
     setStep('verify')
+      // Track invite conversion
+      if (inviteCode) {
+        fetch('/api/invite/track', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ inviteCode }),
+        }).catch(() => {})
+      }
     setLoading(false)
   }
 

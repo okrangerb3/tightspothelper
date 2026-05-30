@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/api-helpers'
 import { prisma } from '@/lib/db'
 import { calculateSessionPricing, createSessionPaymentIntent, stripe } from '@/lib/stripe'
+// Auto-discover pros when no expert available
 import { sendSessionConfirmation, sendExpertNewBooking } from '@/lib/resend'
 import { z } from 'zod'
 
@@ -184,6 +185,25 @@ export async function POST(req: NextRequest) {
         })
       : Promise.resolve(null),
   ]).catch(e => console.error('Session notification emails failed:', e))
+
+  // If no expert was assigned, trigger pro discovery in background
+  if (!newSession.expertId) {
+    const customerProfile = await prisma.authUser.findUnique({
+      where: { id: auth.user.id },
+      select: { city: true, state: true },
+    })
+    fetch(new URL('/api/discover-pros', process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Cookie: req.headers.get('cookie') ?? '' },
+      body: JSON.stringify({
+        categoryId:   newSession.categoryId,
+        categoryName: category.name,
+        lat:          0, // TODO: geocode from customer city/state
+        lng:          0,
+        city:         (customerProfile as any)?.city ?? '',
+      }),
+    }).catch(e => console.error('Pro discovery failed:', e))
+  }
 
   return NextResponse.json({ session: newSession, pricing })
 }
