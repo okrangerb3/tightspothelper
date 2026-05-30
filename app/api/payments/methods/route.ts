@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest) {
   const methods  = await stripe.customers.listPaymentMethods(user.stripeCustomerId, { type: 'card', limit: 10 })
   const customer = await stripe.customers.retrieve(user.stripeCustomerId)
   const defaultId = typeof customer !== 'string' && !customer.deleted
-    ? (customer.invoice_settings?.default_payment_method as string | null)
+    ? ((customer as any).invoice_settings?.default_payment_method as string | null)
     : null
 
   return NextResponse.json({

@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
   const defaultPaymentMethodId =
     typeof customer !== 'string' && !customer.deleted
-      ? (customer.invoice_settings?.default_payment_method as string | null)
+      ? ((customer as any).invoice_settings?.default_payment_method as string | null)
       : null
 
   const paymentMethod =

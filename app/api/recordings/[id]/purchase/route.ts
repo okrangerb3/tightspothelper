@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const methods    = await stripe.customers.listPaymentMethods(user.stripeCustomerId, { limit: 10 })
   const customer   = await stripe.customers.retrieve(user.stripeCustomerId)
   const defaultPmId = typeof customer !== 'string' && !customer.deleted
-    ? (customer.invoice_settings?.default_payment_method as string | null)
+    ? ((customer as any).invoice_settings?.default_payment_method as string | null)
     : null
 
   const paymentMethod = defaultPmId
