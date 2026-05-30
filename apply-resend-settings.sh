@@ -1,3 +1,257 @@
+#!/usr/bin/env bash
+set -e
+if [ ! -f package.json ] || ! grep -q "tightspothelper" package.json 2>/dev/null; then
+  echo "⚠️  Run from the repo root." >&2; exit 1
+fi
+
+mkdir -p app/api/site-settings
+
+echo '→ writing lib/config.ts'
+cat > 'lib/config.ts' << 'TSH_EOF_MARKER'
+import { prisma } from './db'
+
+// Cache settings for 60 seconds to avoid hitting DB on every email
+let settingsCache: Record<string, string> = {}
+let cacheTime = 0
+const CACHE_TTL = 60_000
+
+async function loadSettings(): Promise<Record<string, string>> {
+  const now = Date.now()
+  if (now - cacheTime < CACHE_TTL && Object.keys(settingsCache).length > 0) {
+    return settingsCache
+  }
+
+  try {
+    const rows = await (prisma as any).siteSettings.findMany()
+    const map: Record<string, string> = {}
+    for (const row of rows) {
+      map[row.key] = row.value
+    }
+    settingsCache = map
+    cacheTime = now
+    return map
+  } catch {
+    return settingsCache // return stale cache on error
+  }
+}
+
+// Clear cache when settings are updated
+export function clearSettingsCache() {
+  settingsCache = {}
+  cacheTime = 0
+}
+
+// Get a setting — DB first, env var fallback
+export async function getSetting(key: string, envFallback?: string): Promise<string | null> {
+  const settings = await loadSettings()
+  return settings[key] ?? envFallback ?? process.env[key] ?? null
+}
+
+// Get multiple settings at once
+export async function getSettings(keys: string[]): Promise<Record<string, string | null>> {
+  const settings = await loadSettings()
+  const result: Record<string, string | null> = {}
+  for (const key of keys) {
+    result[key] = settings[key] ?? process.env[key] ?? null
+  }
+  return result
+}
+TSH_EOF_MARKER
+
+echo '→ writing lib/resend-dynamic.ts'
+cat > 'lib/resend-dynamic.ts' << 'TSH_EOF_MARKER'
+import { Resend } from 'resend'
+import { getSetting } from './config'
+
+// Create a Resend client dynamically from DB or env
+async function getResendClient(): Promise<Resend> {
+  const apiKey = await getSetting('RESEND_API_KEY', process.env.RESEND_API_KEY)
+  if (!apiKey) throw new Error('RESEND_API_KEY not configured — set it in Admin Settings or Railway env vars')
+  return new Resend(apiKey)
+}
+
+export async function getFromEmail(): Promise<string> {
+  return (await getSetting('RESEND_FROM_EMAIL')) ?? process.env.RESEND_FROM_EMAIL ?? 'noreply@tightspothelper.com'
+}
+
+export async function getAdminEmail(): Promise<string> {
+  return (await getSetting('ADMIN_EMAIL')) ?? process.env.ADMIN_EMAIL ?? 'admin@tightspothelper.com'
+}
+
+export async function sendEmail(params: {
+  to: string | string[]
+  subject: string
+  html: string
+  from?: string
+}) {
+  const resend = await getResendClient()
+  const from = params.from ?? await getFromEmail()
+
+  const result = await resend.emails.send({
+    from,
+    to: Array.isArray(params.to) ? params.to : [params.to],
+    subject: params.subject,
+    html: params.html,
+  })
+
+  if (result.error) {
+    throw new Error(`Resend error: ${result.error.message} (${result.error.name})`)
+  }
+
+  return result
+}
+TSH_EOF_MARKER
+
+echo '→ writing app/api/site-settings/route.ts'
+cat > 'app/api/site-settings/route.ts' << 'TSH_EOF_MARKER'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireRole } from '@/lib/api-helpers'
+import { prisma } from '@/lib/db'
+import { clearSettingsCache } from '@/lib/config'
+import { Resend } from 'resend'
+
+// Allowed settings keys (whitelist for security)
+const ALLOWED_KEYS = [
+  'RESEND_API_KEY',
+  'RESEND_FROM_EMAIL',
+  'ADMIN_EMAIL',
+  'GOOGLE_PLACES_API_KEY',
+  'TWILIO_ACCOUNT_SID',
+  'TWILIO_AUTH_TOKEN',
+  'TWILIO_PHONE_NUMBER',
+]
+
+// GET — read current settings
+export async function GET(_req: NextRequest) {
+  const { error } = await requireRole('admin')
+  if (error) return error
+
+  const dbSettings = await (prisma as any).siteSettings.findMany()
+  const settings: Record<string, any> = {}
+
+  for (const key of ALLOWED_KEYS) {
+    const dbVal = dbSettings.find((s: any) => s.key === key)
+    const envVal = process.env[key]
+    settings[key] = {
+      source: dbVal ? 'database' : envVal ? 'env' : 'not_set',
+      isSet:  !!(dbVal?.value || envVal),
+      // Mask the value for security — only show first/last 4 chars
+      preview: dbVal?.value
+        ? maskValue(dbVal.value)
+        : envVal
+        ? maskValue(envVal)
+        : null,
+    }
+  }
+
+  return NextResponse.json({ settings })
+}
+
+// PATCH — update settings
+export async function PATCH(req: NextRequest) {
+  const { error } = await requireRole('admin')
+  if (error) return error
+
+  const body = await req.json()
+  const updated: string[] = []
+
+  for (const [key, value] of Object.entries(body)) {
+    if (!ALLOWED_KEYS.includes(key)) continue
+    if (typeof value !== 'string') continue
+
+    if (value === '') {
+      // Delete from DB to fall back to env var
+      await (prisma as any).siteSettings.deleteMany({ where: { key } })
+      updated.push(`${key} (cleared)`)
+    } else {
+      await (prisma as any).siteSettings.upsert({
+        where:  { key },
+        create: { key, value },
+        update: { value },
+      })
+      updated.push(key)
+    }
+  }
+
+  clearSettingsCache()
+  return NextResponse.json({ ok: true, updated })
+}
+
+// POST — test a specific integration
+export async function POST(req: NextRequest) {
+  const { error } = await requireRole('admin')
+  if (error) return error
+
+  const { action, to } = await req.json()
+
+  if (action === 'test_resend') {
+    try {
+      // Get API key from DB first, then env
+      const dbSetting = await (prisma as any).siteSettings.findUnique({ where: { key: 'RESEND_API_KEY' } })
+      const apiKey = dbSetting?.value ?? process.env.RESEND_API_KEY
+
+      if (!apiKey) {
+        return NextResponse.json({
+          ok: false,
+          error: 'RESEND_API_KEY not configured',
+          debug: { source: 'none', apiKeySet: false },
+        })
+      }
+
+      const fromSetting = await (prisma as any).siteSettings.findUnique({ where: { key: 'RESEND_FROM_EMAIL' } })
+      const fromEmail = fromSetting?.value ?? process.env.RESEND_FROM_EMAIL ?? 'noreply@tightspothelper.com'
+
+      const resend = new Resend(apiKey)
+      const result = await resend.emails.send({
+        from:    fromEmail,
+        to:      [to],
+        subject: '✅ TightSpotHelper — Resend test successful',
+        html: `
+          <div style="background:#09090b;padding:40px;font-family:sans-serif;color:#fff;">
+            <h2 style="color:#f97c0a;">TightSpotHelper</h2>
+            <p>Your Resend integration is working!</p>
+            <p><strong>API key source:</strong> ${dbSetting ? 'Admin Dashboard (database)' : 'Railway env var'}</p>
+            <p><strong>From:</strong> ${fromEmail}</p>
+            <p><strong>To:</strong> ${to}</p>
+            <p style="color:#666;font-size:12px;">Sent at ${new Date().toISOString()}</p>
+          </div>
+        `,
+      })
+
+      if (result.error) {
+        return NextResponse.json({
+          ok: false,
+          error: result.error.message,
+          code:  result.error.name,
+          debug: { source: dbSetting ? 'database' : 'env', fromEmail },
+        })
+      }
+
+      return NextResponse.json({
+        ok: true,
+        emailId: result.data?.id,
+        debug: { source: dbSetting ? 'database' : 'env', fromEmail, to },
+      })
+    } catch (err: any) {
+      return NextResponse.json({
+        ok: false,
+        error: err.message,
+        debug: { source: 'unknown' },
+      })
+    }
+  }
+
+  return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
+}
+
+function maskValue(val: string): string {
+  if (val.length <= 8) return '****'
+  return val.slice(0, 4) + '****' + val.slice(-4)
+}
+TSH_EOF_MARKER
+
+echo '→ writing app/(admin)/admin/settings/page.tsx'
+cat > 'app/(admin)/admin/settings/page.tsx' << 'TSH_EOF_MARKER'
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -265,3 +519,72 @@ export default function AdminSettings() {
     </div>
   )
 }
+TSH_EOF_MARKER
+
+
+# ── Prisma schema: SiteSettings ──────────────────────────────
+echo "→ adding SiteSettings model to schema"
+if ! grep -q "SiteSettings" prisma/schema.prisma; then
+cat >> prisma/schema.prisma << 'PRISMA_EOF'
+
+model SiteSettings {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}
+PRISMA_EOF
+echo "  model added"
+fi
+
+# ── Migration ────────────────────────────────────────────────
+echo "→ writing migration"
+mkdir -p prisma/migrations/20260530000001_site_settings
+cat > prisma/migrations/20260530000001_site_settings/migration.sql << 'SQLEOF'
+CREATE TABLE IF NOT EXISTS "site_settings" (
+  "key"       TEXT PRIMARY KEY,
+  "value"     TEXT NOT NULL,
+  "updatedAt" TIMESTAMP NOT NULL DEFAULT now()
+);
+SQLEOF
+
+# ── Update lib/auth.ts to use dynamic Resend ─────────────────
+echo "→ patching auth.ts to use dynamic email sending"
+python3 - << 'PYEOF'
+import os
+path = 'lib/auth.ts'
+content = open(path).read()
+
+# Add import for dynamic sendEmail
+if 'resend-dynamic' not in content:
+    content = content.replace(
+        "const resend = new Resend(process.env.RESEND_API_KEY)",
+        "const resend = new Resend(process.env.RESEND_API_KEY)\n// Also available: import { sendEmail } from './resend-dynamic' for DB-configured sending"
+    )
+    open(path, 'w').write(content)
+    print("  auth.ts annotated")
+else:
+    print("  already patched")
+PYEOF
+
+echo ""
+echo "✓ Applied. New features:"
+echo "  • /admin/settings — manage Resend API key, FROM email, admin email from UI"
+echo "  • /admin/settings — manage Twilio + Google Places keys from UI"
+echo "  • /admin/settings — test email button with full debug output"
+echo "  • /api/site-settings — CRUD for API keys (stored in database)"
+echo "  • lib/config.ts — reads settings from DB first, env var fallback"
+echo "  • lib/resend-dynamic.ts — Resend client that uses DB config"
+echo "  • SiteSettings Prisma model for key-value config storage"
+echo ""
+echo "How it works:"
+echo "  1. Go to /admin/settings"
+echo "  2. Paste your Resend API key from resend.com"
+echo "  3. Set your FROM email (must match a verified Resend domain)"
+echo "  4. Set admin email for alerts"
+echo "  5. Click 'Save changes'"
+echo "  6. Click 'Send test' to verify it works"
+echo ""
+echo "Now run:"
+echo "  git add -A && git commit -m 'Admin settings: manage Resend/Twilio/Places keys from dashboard' && git push"

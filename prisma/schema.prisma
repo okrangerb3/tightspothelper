@@ -448,3 +448,11 @@ model ProOutreach {
 
   @@map("pro_outreach")
 }
+
+model SiteSettings {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("site_settings")
+}

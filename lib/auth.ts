@@ -4,6 +4,7 @@ import { prisma } from './db'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
+// Also available: import { sendEmail } from './resend-dynamic' for DB-configured sending
 
 if (!process.env.DATABASE_URL) {
   console.error('[Auth] DATABASE_URL is not set.')
