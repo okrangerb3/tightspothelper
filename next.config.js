@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
   webpack: (config, { dev }) => {
     config.cache = false
     return config
