@@ -5,13 +5,13 @@ import { prisma } from '@/lib/db'
 import Link from 'next/link'
 import AdminProDetailClient from './AdminProDetailClient'
 
-export default async function AdminProDetail({ params }: { params: { id: string } }) {
+export default async function AdminProDetail({ searchParams }: { searchParams: { id?: string } }) {
   const session = await auth.api.getSession({ headers: headers() })
   if (!session) redirect('/login')
   if ((session.user as any).role !== 'admin') redirect('/customer/dashboard')
 
   const expert = await prisma.expertProfile.findUnique({
-    where:   { id: params.id },
+    where:   { id: searchParams.id ?? "" },
     include: { user: { select: {
       id: true, name: true, email: true, phone: true,
       createdAt: true, emailVerified: true,
@@ -24,7 +24,7 @@ export default async function AdminProDetail({ params }: { params: { id: string 
 
   const [sessions, categories] = await Promise.all([
     prisma.session.findMany({
-      where:   { expertId: params.id },
+      where:   { expertId: searchParams.id ?? "" },
       include: {
         customer: { select: { name: true, email: true } },
         category: { select: { name: true } },

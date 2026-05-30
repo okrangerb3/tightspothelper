@@ -5,13 +5,13 @@ import { prisma } from '@/lib/db'
 import Link from 'next/link'
 import AdminCustomerDetailClient from './AdminCustomerDetailClient'
 
-export default async function AdminCustomerDetail({ params }: { params: { id: string } }) {
+export default async function AdminCustomerDetail({ searchParams }: { searchParams: { id?: string } }) {
   const session = await auth.api.getSession({ headers: headers() })
   if (!session) redirect('/login')
   if ((session.user as any).role !== 'admin') redirect('/customer/dashboard')
 
   const user = await prisma.authUser.findUnique({
-    where: { id: params.id },
+    where: { id: searchParams.id ?? "" },
     select: {
       id: true, name: true, email: true, phone: true,
       createdAt: true, emailVerified: true, stripeCustomerId: true,
@@ -24,7 +24,7 @@ export default async function AdminCustomerDetail({ params }: { params: { id: st
 
   const [sessions, notifications] = await Promise.all([
     prisma.session.findMany({
-      where:   { customerId: params.id },
+      where:   { customerId: searchParams.id ?? "" },
       include: {
         expert:   { select: { name: true } },
         category: { select: { name: true } },
@@ -34,7 +34,7 @@ export default async function AdminCustomerDetail({ params }: { params: { id: st
       orderBy: { createdAt: 'desc' },
     }),
     prisma.notification.findMany({
-      where:   { userId: params.id },
+      where:   { userId: searchParams.id ?? "" },
       orderBy: { createdAt: 'desc' },
       take:    50,
     }).catch(() => []),
